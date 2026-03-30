@@ -261,21 +261,34 @@
 
         // 이미지 다운로드 실행 함수
         async function downloadImage(imageSrc, fileName) {
-            try {
-                const response = await fetch(imageSrc);
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = fileName; // 저장될 파일 이름
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            } catch (error) {
-                console.error("다운로드 실패:", error);
-                alert("다운로드에 실패했습니다.");
+            // 아이폰/모바일 환경에서 공유 기능을 지원하는 경우
+            if (navigator.share) {
+                try {
+                    const response = await fetch(imageSrc);
+                    const blob = await response.blob();
+                    const file = new File([blob], fileName, { type: blob.type });
+
+                    await navigator.share({
+                        files: [file],
+                        title: '하진이 사진 저장',
+                    });
+                } catch (err) {
+                    // 공유 취소 시 일반 다운로드 시도
+                    performDownload(imageSrc, fileName);
+                }
+            } else {
+                // PC 환경은 기존 방식대로 다운로드
+                performDownload(imageSrc, fileName);
             }
+        }
+
+        function performDownload(imageSrc, fileName) {
+            const a = document.createElement('a');
+            a.href = imageSrc;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         }
 
         backBtn.onclick = renderTimeline;

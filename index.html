@@ -215,7 +215,7 @@
             });
         }
 
-        // 4. 상세 화면 (1열 리스트)
+        // 4. 상세 화면 (1열 리스트 + 다운로드 버튼 추가)
         function renderDetail(date) {
             timelineList.innerHTML = '';
             document.getElementById('timeline-line').classList.add('hidden');
@@ -228,15 +228,24 @@
 
             photos.forEach((photo, idx) => {
                 const card = document.createElement('div');
-                card.className = "bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100";
+                card.className = "bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 pb-2";
+
+                const fileName = photo.src.split('/').pop();
+
                 card.innerHTML = `
-                    <img src="${photo.src}" class="w-full h-auto object-cover border-b border-gray-50">
+                    <div class="relative group cursor-pointer" onclick="downloadImage('${photo.src}', '${fileName}')">
+                        <img src="${photo.src}" class="w-full h-auto object-cover border-b border-gray-50 active:opacity-70 transition-opacity">
+                        <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <span class="text-white font-bold bg-black/40 px-4 py-2 rounded-full text-sm">📥 클릭하여 저장</span>
+                        </div>
+                    </div>
+
                     <div class="p-5 flex justify-between items-center">
                         <div>
                             <p class="text-xs font-bold text-pink-500 mb-1">Moment ${idx + 1}</p>
-                            <p class="text-sm text-gray-600">오늘의 소중한 기록</p>
+                            <p class="text-sm text-gray-700 leading-relaxed">하진이의 소중한 순간</p>
                         </div>
-                        <span class="text-xs text-gray-400">${photo.time}</span>
+                        <span class="text-xs text-gray-400 font-medium">${photo.time}</span>
                     </div>
                 `;
                 detailContainer.appendChild(card);
@@ -244,6 +253,25 @@
 
             timelineList.appendChild(detailContainer);
             window.scrollTo(0, 0);
+        }
+
+        // 이미지 다운로드 실행 함수
+        async function downloadImage(imageSrc, fileName) {
+            try {
+                const response = await fetch(imageSrc);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName; // 저장될 파일 이름
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (error) {
+                console.error("다운로드 실패:", error);
+                alert("다운로드에 실패했습니다.");
+            }
         }
 
         backBtn.onclick = renderTimeline;

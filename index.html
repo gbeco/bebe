@@ -10,6 +10,10 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
         .photo-grid { display: grid; gap: 8px; width: 100%; aspect-ratio: 16/9; }
+        .saveable-image {
+            -webkit-touch-callout: default !important;
+            display: block;
+        }
     </style>
 </head>
 <body class="bg-gray-50 font-sans mb-24">
@@ -234,7 +238,7 @@
 
                 card.innerHTML = `
                     <div class="relative group cursor-pointer" onclick="downloadImage('${photo.src}', '${fileName}')">
-                        <img src="${photo.src}" class="w-full h-auto object-cover border-b border-gray-50 active:opacity-70 transition-opacity">
+                        <img src="${photo.src}" class="w-full h-auto object-cover border-b border-gray-50 active:opacity-70 saveable-image">
                         <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                             <span class="text-white font-bold bg-black/40 px-4 py-2 rounded-full text-sm">📥 클릭하여 저장</span>
                         </div>

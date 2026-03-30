@@ -3,59 +3,253 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <title>우리 아기 성장일기</title>
+    <title>아기 성장 기록 - Bebememo 스타일</title>
+    <style>
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        .photo-grid { display: grid; gap: 8px; width: 100%; aspect-ratio: 16/9; }
+    </style>
 </head>
-<body class="bg-gray-50 font-sans">
+<body class="bg-gray-50 font-sans mb-24">
 
-    <header class="bg-white p-6 shadow-sm sticky top-0 z-10">
-        <div class="flex items-center space-x-4">
-            <div class="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center overflow-hidden border-2 border-pink-200">
-                <span class="text-2xl">👶</span>
-            </div>
+    <header class="bg-white/80 backdrop-blur-md p-6 shadow-sm sticky top-0 z-30 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <button id="back-btn" class="hidden text-2xl p-2 hover:bg-gray-100 rounded-full transition-all">←</button>
             <div>
-                <h1 class="text-xl font-bold text-gray-800">지후의 성장기록</h1>
-                <p class="text-sm text-pink-500 font-semibold">태어난 지 +128일</p>
+                <h1 id="header-title" class="text-xl font-bold text-gray-800">하진이의 성장기록</h1>
+                <p id="d-day-display" class="text-xs text-pink-500 font-bold bg-pink-50 px-2 py-0.5 rounded-full inline-block mt-1">
+                    태어난 지 +0일
+                </p>
             </div>
         </div>
+        <div class="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center text-2xl border-2 border-white shadow-sm">👶</div>
     </header>
 
-    <main class="max-w-md mx-auto p-4 space-y-8 relative">
-        <div class="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200 z-0"></div>
+    <main id="main-container" class="max-w-md mx-auto p-4 relative">
+        <div id="timeline-line" class="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200 z-0"></div>
 
-        <section class="relative z-10 flex space-x-4">
-            <div class="w-8 h-8 bg-pink-400 rounded-full border-4 border-white shadow-sm mt-1 flex-shrink-0"></div>
-            <div class="flex-1 bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-                <div class="p-3 bg-gray-50 flex justify-between items-center">
-                    <span class="font-bold text-gray-700">2024년 5월 20일</span>
-                    <span class="text-xs text-gray-400">오후 2:30</span>
-                </div>
-                <div class="aspect-square bg-gray-200 flex items-center justify-center text-gray-400">
-                    사진 업로드 영역 (이미지 태그 들어갈 곳)
-                </div>
-                <div class="p-4">
-                    <p class="text-gray-600 leading-relaxed">오늘은 처음으로 뒤집기에 성공했어요! 너무 대견한 우리 아기 😍</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="relative z-10 flex space-x-4">
-            <div class="w-8 h-8 bg-gray-300 rounded-full border-4 border-white shadow-sm mt-1 flex-shrink-0"></div>
-            <div class="flex-1 bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-                <div class="p-3 bg-gray-50 flex justify-between items-center">
-                    <span class="font-bold text-gray-700">2024년 5월 19일</span>
-                </div>
-                <div class="aspect-square bg-gray-200"></div>
-                <div class="p-4">
-                    <p class="text-gray-600 leading-relaxed">목욕하고 기분 좋은 상태. 뽀송뽀송해요.</p>
-                </div>
-            </div>
-        </section>
+        <div id="timeline-list" class="space-y-10 relative z-10">
+            <div class="text-center py-20 text-gray-400">사진 데이터를 불러오는 중...</div>
+        </div>
     </main>
 
-    <button class="fixed bottom-6 right-6 w-14 h-14 bg-pink-500 text-white rounded-full shadow-lg text-3xl flex items-center justify-center hover:bg-pink-600 transition-all">
+    <input type="file" id="file-input" accept="image/*" class="hidden" multiple>
+
+    <button id="fab" class="fixed bottom-8 right-8 w-16 h-16 bg-pink-500 text-white rounded-full shadow-2xl text-4xl flex items-center justify-center active:scale-90 hover:bg-pink-600 transition-all z-40">
         +
     </button>
 
+    <script>
+
+        window.onload = () => {
+            const password = prompt("비밀번호를 입력하세요:");
+            if (password === "123123") { // 원하는 비밀번호로 수정
+                updateDDay();
+                loadPhotosFromServer();
+            } else {
+                alert("비밀번호가 틀렸습니다.");
+                document.body.innerHTML = "<h1>접근 권한이 없습니다.</h1>";
+            }
+        };
+        // 하진이 생일 설정
+        const BIRTH_DATE = new Date("2026-01-16");
+
+        function updateDDay() {
+            const today = new Date();
+            // 시간 정보를 제거하고 날짜 차이만 계산 (오늘 - 생일)
+            const diffTime = today.getTime() - BIRTH_DATE.getTime();
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; // 태어난 날을 1일로 계산
+
+            const dDayDisplay = document.getElementById('d-day-display');
+            dDayDisplay.innerText = `태어난 지 +${diffDays}일`;
+        }
+
+        // 기존 window.onload에 추가
+        window.addEventListener('load', () => {
+            updateDDay();
+            loadPhotosFromServer();
+        });
+
+        const API_BASE = "https://reid-zone-prediction-web.trycloudflare.com";
+        let photoData = {}; // { "2026-03-31": [{src, name, time}, ...] }
+
+        const fileInput = document.getElementById('file-input');
+        const fab = document.getElementById('fab');
+        const timelineList = document.getElementById('timeline-list');
+        const backBtn = document.getElementById('back-btn');
+        const headerTitle = document.getElementById('header-title');
+
+        // 1. 페이지 로드 시 서버에서 데이터 가져오기
+        async function loadPhotosFromServer() {
+            try {
+                const response = await fetch(`${API_BASE}/photos`);
+                const filenames = await response.json();
+
+                photoData = {}; // 초기화
+
+                filenames.sort().reverse().forEach(name => {
+                    // 파일명 규칙: YYYYMMDD_HHMMSS_name.jpg 로 가정
+                    const dateStr = `${name.substring(0, 4)}-${name.substring(4, 6)}-${name.substring(6, 8)}`;
+                    const timeStr = `${name.substring(9, 11)}:${name.substring(11, 13)}`;
+
+                    if (!photoData[dateStr]) photoData[dateStr] = [];
+                    photoData[dateStr].push({
+                        src: `${API_BASE}/data/${name}`,
+                        name: name,
+                        time: timeStr
+                    });
+                });
+
+                renderTimeline();
+            } catch (err) {
+                timelineList.innerHTML = `<div class="text-center py-20 text-red-400">파이썬 서버를 확인해주세요.<br><span class="text-xs text-gray-400">app.py 실행 필요</span></div>`;
+            }
+        }
+
+        // 2. 사진 업로드 처리
+        fab.onclick = () => fileInput.click();
+
+        fileInput.onchange = async (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+
+            headerTitle.innerText = "날짜 분석 중...";
+
+            for (const file of files) {
+                // 1. 사진의 EXIF 날짜 추출하기
+                const photoDate = await getPhotoDate(file);
+
+                const formData = new FormData();
+                formData.append('photo', file);
+                formData.append('memo', '성장 기록');
+                formData.append('taken_date', photoDate); // 추출한 날짜를 서버로 전송
+
+                try {
+                    await fetch(`${API_BASE}/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                } catch (err) {
+                    console.error("업로드 실패:", err);
+                }
+            }
+
+            fileInput.value = "";
+            await loadPhotosFromServer();
+            headerTitle.innerText = "하진이 타임라인";
+        };
+
+        // 사진에서 날짜를 추출하는 함수
+        function getPhotoDate(file) {
+            return new Promise((resolve) => {
+                EXIF.getData(file, function() {
+                    const dateStr = EXIF.getTag(this, "DateTimeOriginal");
+                    if (dateStr) {
+                        // EXIF 날짜 형식 "2023:05:20 14:30:00" -> "20230520_143000" 변환
+                        const formatted = dateStr.replace(/:/g, "").replace(" ", "_");
+                        resolve(formatted);
+                    } else {
+                        // 날짜 정보가 없으면 파일의 마지막 수정일 사용
+                        const lastMod = new Date(file.lastModified);
+                        const year = lastMod.getFullYear();
+                        const month = String(lastMod.getMonth() + 1).padStart(2, '0');
+                        const day = String(lastMod.getDate()).padStart(2, '0');
+                        const time = lastMod.toTimeString().split(' ')[0].replace(/:/g, "");
+                        resolve(`${year}${month}${day}_${time}`);
+                    }
+                });
+            });
+        }
+
+        // 3. 메인 타임라인 렌더링 (요약보기)
+        function renderTimeline() {
+            timelineList.innerHTML = '';
+            document.getElementById('timeline-line').classList.remove('hidden');
+            backBtn.classList.add('hidden');
+            headerTitle.innerText = "하진이 타임라인";
+
+            const sortedDates = Object.keys(photoData).sort().reverse();
+
+            if (sortedDates.length === 0) {
+                timelineList.innerHTML = `<div class="text-center py-20 text-gray-400">+ 버튼을 눌러 첫 기록을 남기세요.</div>`;
+                return;
+            }
+
+            sortedDates.forEach(date => {
+                const photos = photoData[date];
+                const section = document.createElement('section');
+                section.className = "flex space-x-4 cursor-pointer group animate-fade-in";
+                section.onclick = () => renderDetail(date);
+
+                // 사진 3장 요약 레이아웃
+                let photoMarkup = '';
+                if (photos.length === 1) {
+                    photoMarkup = `<div class="w-full aspect-video rounded-2xl overflow-hidden shadow-sm border border-gray-100"><img src="${photos[0].src}" class="w-full h-full object-cover"></div>`;
+                } else {
+                    photoMarkup = `
+                        <div class="grid grid-cols-2 gap-2 w-full aspect-video">
+                            <div class="rounded-2xl overflow-hidden border border-gray-100 shadow-sm"><img src="${photos[0].src}" class="w-full h-full object-cover"></div>
+                            <div class="grid grid-rows-2 gap-2">
+                                <div class="rounded-xl overflow-hidden border border-gray-100"><img src="${photos[1].src}" class="w-full h-full object-cover"></div>
+                                <div class="rounded-xl overflow-hidden relative border border-gray-100 bg-gray-50">
+                                    ${photos[2] ? `<img src="${photos[2].src}" class="w-full h-full object-cover">` : ''}
+                                    ${photos.length > 2 ? `<div class="absolute inset-0 bg-black/40 flex items-center justify-center text-white font-bold">+${photos.length - 2}</div>` : ''}
+                                </div>
+                            </div>
+                        </div>`;
+                }
+
+                section.innerHTML = `
+                    <div class="w-8 h-8 bg-pink-400 rounded-full border-4 border-white shadow-sm flex-shrink-0 mt-1"></div>
+                    <div class="flex-1 bg-white p-4 rounded-3xl shadow-sm border border-gray-50 hover:shadow-md transition-all">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="font-bold text-gray-800">${date}</span>
+                            <span class="text-xs text-gray-400">${photos.length}장의 순간</span>
+                        </div>
+                        ${photoMarkup}
+                    </div>
+                `;
+                timelineList.appendChild(section);
+            });
+        }
+
+        // 4. 상세 화면 (1열 리스트)
+        function renderDetail(date) {
+            timelineList.innerHTML = '';
+            document.getElementById('timeline-line').classList.add('hidden');
+            backBtn.classList.remove('hidden');
+            headerTitle.innerText = date;
+
+            const photos = photoData[date];
+            const detailContainer = document.createElement('div');
+            detailContainer.className = "space-y-6 animate-fade-in";
+
+            photos.forEach((photo, idx) => {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100";
+                card.innerHTML = `
+                    <img src="${photo.src}" class="w-full h-auto object-cover border-b border-gray-50">
+                    <div class="p-5 flex justify-between items-center">
+                        <div>
+                            <p class="text-xs font-bold text-pink-500 mb-1">Moment ${idx + 1}</p>
+                            <p class="text-sm text-gray-600">오늘의 소중한 기록</p>
+                        </div>
+                        <span class="text-xs text-gray-400">${photo.time}</span>
+                    </div>
+                `;
+                detailContainer.appendChild(card);
+            });
+
+            timelineList.appendChild(detailContainer);
+            window.scrollTo(0, 0);
+        }
+
+        backBtn.onclick = renderTimeline;
+
+        // 시작 시 데이터 로드
+        loadPhotosFromServer();
+    </script>
 </body>
 </html>

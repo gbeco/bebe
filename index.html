@@ -47,16 +47,17 @@
 
     <script>
 
-        window.onload = () => {
-            const password = prompt("비밀번호를 입력하세요:");
-            if (password === "123123") { // 원하는 비밀번호로 수정
-                updateDDay();
-                loadPhotosFromServer();
-            } else {
-                alert("비밀번호가 틀렸습니다.");
-                document.body.innerHTML = "<h1>접근 권한이 없습니다.</h1>";
-            }
-        };
+<!--        window.onload = () => {-->
+<!--            const password = prompt("비밀번호를 입력하세요:");-->
+<!--            if (password === "123123") { // 원하는 비밀번호로 수정-->
+<!--                updateDDay();-->
+<!--                loadPhotosFromServer();-->
+<!--            } else {-->
+<!--                alert("비밀번호가 틀렸습니다.");-->
+<!--                document.body.innerHTML = "<h1>접근 권한이 없습니다.</h1>";-->
+<!--            }-->
+<!--        };-->
+
         // 하진이 생일 설정
         const BIRTH_DATE = new Date("2026-01-16");
 
@@ -88,7 +89,13 @@
         // 1. 페이지 로드 시 서버에서 데이터 가져오기
         async function loadPhotosFromServer() {
             try {
-                const response = await fetch(`${API_BASE}/photos`);
+                const response = await fetch(`${API_BASE}/photos`, {
+                    method: 'GET',
+                    headers: {
+                        // 이 헤더가 있으면 ngrok 경고 페이지를 건너뜁니다.
+                        'ngrok-skip-browser-warning': '69420'
+                    }
+                });
                 const filenames = await response.json();
 
                 photoData = {}; // 초기화
@@ -133,6 +140,9 @@
                 try {
                     await fetch(`${API_BASE}/upload`, {
                         method: 'POST',
+                        headers: {
+                            'ngrok-skip-browser-warning': '69420'
+                        },
                         body: formData
                     });
                 } catch (err) {

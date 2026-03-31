@@ -156,11 +156,16 @@
             try {
                 const response = await fetch(`${API_BASE}/photos`, {
                     method: 'GET',
-                    headers: {
-                        // 이 헤더가 있으면 ngrok 경고 페이지를 건너뜁니다.
-                        'ngrok-skip-browser-warning': '69420'
-                    }
+                    headers: { 'ngrok-skip-browser-warning': '69420' }
                 });
+
+                // 응답이 JSON이 아니면(경고 페이지면) 팝업 띄우기
+                const contentType = response.headers.get("content-type");
+                if (!response.ok || !contentType || !contentType.includes("application/json")) {
+                    renderConnectionGuide();
+                    return;
+                }
+
                 const filenames = await response.json();
 
                 photoData = {}; // 초기화
@@ -180,7 +185,8 @@
 
                 renderTimeline();
             } catch (err) {
-                timelineList.innerHTML = `<div class="text-center py-20 text-red-400">파이썬 서버를 확인해주세요.<br><span class="text-xs text-gray-400">app.py 실행 필요</span></div>`;
+                console.log("로딩 에러:", err);
+                renderConnectionGuide(); // 에러 시 팝업 띄우기
             }
         }
 
@@ -406,8 +412,6 @@
 
         backBtn.onclick = renderTimeline;
 
-        // 시작 시 데이터 로드
-        loadPhotosFromServer();
     </script>
 </body>
 </html>

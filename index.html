@@ -116,39 +116,60 @@
             const files = Array.from(e.target.files);
             if (files.length === 0) return;
 
-            // 1. 로딩 오버레이 표시 (이게 뜨면서 아이폰 사진 폴더가 닫히도록 유도함)
+            // 1. 현재 서버에 등록된 모든 파일 이름을 가져와서 비교 세트 생성
+            // photoData에 저장된 파일 이름들을 추출합니다.
+            const existingFiles = new Set();
+            Object.values(photoData).flat().forEach(photo => {
+                // photo.name은 "20260331_123000_image.jpg" 형태입니다.
+                existingFiles.add(photo.name);
+            });
+
             const overlay = document.getElementById('upload-overlay');
             overlay.style.display = 'flex';
             fab.disabled = true;
 
-            // 2. 파일들을 하나씩 업로드
-            try {
-                for (const file of files) {
-                    const formData = new FormData();
-                    formData.append('photo', file);
+            let uploadCount = 0;
+            let skipCount = 0;
 
-                    const photoDate = await getPhotoDate(file);
-                    formData.append('taken_date', photoDate);
+            for (const file of files) {
+                // 2. 날짜 추출
+                const photoDate = await getPhotoDate(file);
 
-                    // 서버 전송
+                // 3. 서버에 저장될 예상 파일명 생성 (app.py의 규칙과 동일하게)
+                const expectedName = `${photoDate}_${file.name}`;
+
+                // 4. 중복 체크: 이미 존재하는 파일명이면 업로드를 건너뜁니다.
+                if (existingFiles.has(expectedName)) {
+                    console.log(`중복 제외: ${file.name}`);
+                    skipCount++;
+                    continue;
+                }
+
+                const formData = new FormData();
+                formData.append('photo', file);
+                formData.append('taken_date', photoDate);
+
+                try {
                     const response = await fetch(`${API_BASE}/upload`, {
                         method: 'POST',
                         body: formData
                     });
-
-                    if (!response.ok) throw new Error("업로드 실패");
+                    if (response.ok) uploadCount++;
+                } catch (err) {
+                    console.error("업로드 실패:", err);
                 }
-
-                console.log("모든 파일 업로드 완료");
-            } catch (err) {
-                alert("업로드 중 오류가 발생했습니다.");
-            } finally {
-                // 3. 완료 후 초기화 및 데이터 갱신
-                overlay.style.display = 'none';
-                fab.disabled = false;
-                fileInput.value = ""; // 다음 선택을 위해 초기화
-                loadPhotosFromServer();
             }
+
+            // 5. 결과 알림 및 마무리
+            overlay.style.display = 'none';
+            fab.disabled = false;
+            fileInput.value = "";
+
+            if (skipCount > 0) {
+                alert(`${uploadCount}개 업로드 완료, ${skipCount}개 중복 제외되었습니다.`);
+            }
+
+            loadPhotosFromServer();
         };
 
         function getPhotoDate(file) {

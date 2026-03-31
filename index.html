@@ -45,6 +45,16 @@
         <div class="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center text-2xl border-2 border-white shadow-sm">👶</div>
     </header>
 
+    <nav id="month-filter" class="bg-white border-b sticky top-[88px] z-20 overflow-x-auto whitespace-nowrap p-3 space-x-2 no-scrollbar">
+        <button onclick="filterByMonth('all')" class="inline-block px-4 py-2 rounded-full text-sm font-bold bg-pink-500 text-white shadow-sm transition-all">전체</button>
+    </nav>
+
+    <style>
+        /* 가로 스크롤바 숨기기 (깔끔한 디자인용) */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+
     <main id="main-container" class="max-w-md mx-auto p-4 relative">
         <div id="timeline-line" class="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200 z-0"></div>
         <div id="timeline-list" class="space-y-10 relative z-10">
@@ -102,6 +112,7 @@
                         time: timeStr
                     });
                 });
+                createMonthButtons();
                 renderTimeline();
             } catch (err) {
                 console.error(err);
@@ -283,6 +294,76 @@
             });
             timelineList.appendChild(detailContainer);
             window.scrollTo(0, 0);
+        }
+
+        // 전역 변수에 현재 선택된 월 저장
+        let currentFilter = 'all';
+
+        // 1. 서버에서 데이터를 받은 후 버튼 목록 만들기
+        function createMonthButtons() {
+            const filterContainer = document.getElementById('month-filter');
+            // '전체' 버튼은 유지하고 나머지만 새로 고침
+            filterContainer.innerHTML = `<button onclick="filterByMonth('all')" id="btn-all" class="filter-btn inline-block px-4 py-2 rounded-full text-sm font-bold bg-gray-100 text-gray-600 transition-all">전체</button>`;
+
+            // 데이터에서 'YYYY-MM' 형식의 키만 추출해서 정렬
+            const months = Object.keys(photoData)
+                .map(date => date.substring(0, 7)) // "2026-03-31" -> "2026-03"
+                .filter((v, i, a) => a.indexOf(v) === i) // 중복 제거
+                .sort().reverse();
+
+            months.forEach(month => {
+                const [year, mm] = month.split('-');
+                const btn = document.createElement('button');
+                btn.id = `btn-${month}`;
+                btn.className = "filter-btn inline-block px-4 py-2 rounded-full text-sm font-bold bg-gray-100 text-gray-600 transition-all";
+                btn.innerText = `${parseInt(mm)}월`; // "03월" -> "3월"
+                btn.onclick = () => filterByMonth(month);
+                filterContainer.appendChild(btn);
+            });
+
+            updateFilterUI();
+        }
+
+        // 2. 버튼 클릭 시 필터링 실행
+        function filterByMonth(month) {
+            currentFilter = month;
+            updateFilterUI();
+            renderTimeline(); // 타임라인 다시 그리기
+        }
+
+        // 3. 선택된 버튼 강조 스타일 업데이트
+        function updateFilterUI() {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.replace('bg-pink-500', 'bg-gray-100');
+                btn.classList.replace('text-white', 'text-gray-600');
+            });
+
+            const activeBtn = document.getElementById(`btn-${currentFilter}`);
+            if (activeBtn) {
+                activeBtn.classList.replace('bg-gray-100', 'bg-pink-500');
+                activeBtn.classList.replace('text-gray-600', 'text-white');
+            }
+        }
+
+        // 4. renderTimeline 함수 상단에 필터 로직 추가
+        function renderTimeline() {
+            timelineList.innerHTML = '';
+            const line = document.getElementById('timeline-line');
+            if(line) line.style.display = 'block';
+            backBtn.classList.add('hidden');
+            headerTitle.innerText = "하진이 성장 앨범";
+
+            // 필터링 적용
+            const sortedDates = Object.keys(photoData)
+                .filter(date => currentFilter === 'all' || date.startsWith(currentFilter))
+                .sort().reverse();
+
+            if (sortedDates.length === 0) {
+                timelineList.innerHTML = `<div class="text-center py-20 text-gray-400">해당 월의 기록이 없습니다.</div>`;
+                return;
+            }
+
+            // ... (이하 기존 renderTimeline의 sortedDates.forEach 로직과 동일)
         }
 
         // --- 5. 다운로드 및 공유 기능 ---

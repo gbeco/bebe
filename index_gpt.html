@@ -52,19 +52,27 @@
         </div>
     </main>
 
-    <input type="file" id="file-input" accept="image/*, video/*" class="hidden" multiple>
+    <input type="file" id="file-input" accept="image/*,video/*" class="hidden" multiple>
 
     <button id="fab" class="fixed bottom-8 right-8 w-16 h-16 bg-pink-500 text-white rounded-full shadow-2xl text-4xl flex items-center justify-center active:scale-90 hover:bg-pink-600 transition-all z-40">
         +
     </button>
 
     <script>
-        // 1. 기본 설정 및 변수
+        // =========================
+        // 1. 기본 설정
+        // =========================
         const BIRTH_DATE = new Date("2026-01-16");
-        const API_BASE = "https://adelynn-subacrodrome-instructedly.ngrok-free.dev";
+
+        /**
+         * 같은 오리진이면 빈 문자열로 두세요.
+         * 예)
+         *  - 정적 HTML도 프록시 서버에서 같이 서비스: ""
+         *  - 프록시 서버가 별도 도메인: "https://your-proxy-domain.com"
+         */
+        const API_BASE = "";
 
         let photoData = {};
-        const mediaBlobUrlCache = new Map();
 
         const fileInput = document.getElementById('file-input');
         const fab = document.getElementById('fab');
@@ -72,94 +80,9 @@
         const backBtn = document.getElementById('back-btn');
         const headerTitle = document.getElementById('header-title');
 
+        // =========================
         // 2. 공통 유틸
-        function getNgrokHeaders() {
-            return {
-                'ngrok-skip-browser-warning': 'true'
-            };
-        }
-
-        function isVideoFile(name = '') {
-            const lower = name.toLowerCase();
-            return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.m4v');
-        }
-
-        function buildMediaPath(fileName) {
-            return `/data/${encodeURIComponent(fileName)}`;
-        }
-
-        function revokeAllBlobUrls() {
-            for (const url of mediaBlobUrlCache.values()) {
-                try {
-                    URL.revokeObjectURL(url);
-                } catch (e) {
-                    console.warn('blob URL 해제 실패:', e);
-                }
-            }
-            mediaBlobUrlCache.clear();
-        }
-
-        async function fetchApi(path, options = {}) {
-            const response = await fetch(`${API_BASE}${path}`, {
-                ...options,
-                mode: 'cors',
-                cache: options.cache || 'no-store',
-                headers: {
-                    ...getNgrokHeaders(),
-                    ...(options.headers || {})
-                }
-            });
-
-            return response;
-        }
-
-        async function fetchBlob(path) {
-            const response = await fetchApi(path, {
-                method: 'GET'
-            });
-
-            if (!response.ok) {
-                throw new Error(`파일 요청 실패: ${response.status}`);
-            }
-
-            const contentType = response.headers.get('content-type') || '';
-            if (contentType.includes('text/html')) {
-                throw new Error('ngrok 경고 페이지 또는 HTML 응답이 반환되었습니다.');
-            }
-
-            return await response.blob();
-        }
-
-        async function getBlobUrlForPhoto(photo) {
-            if (photo.blobUrl) return photo.blobUrl;
-
-            const cacheKey = photo.path;
-            if (mediaBlobUrlCache.has(cacheKey)) {
-                photo.blobUrl = mediaBlobUrlCache.get(cacheKey);
-                return photo.blobUrl;
-            }
-
-            const blob = await fetchBlob(photo.path);
-            const blobUrl = URL.createObjectURL(blob);
-
-            mediaBlobUrlCache.set(cacheKey, blobUrl);
-            photo.blobUrl = blobUrl;
-            return blobUrl;
-        }
-
-        async function ensurePhotoBlobUrls(photos = []) {
-            await Promise.all(
-                photos.map(async (photo) => {
-                    try {
-                        await getBlobUrlForPhoto(photo);
-                    } catch (error) {
-                        console.error(`미디어 로드 실패: ${photo.name}`, error);
-                        photo.loadError = true;
-                    }
-                })
-            );
-        }
-
+        // =========================
         function escapeHtml(text = '') {
             return String(text)
                 .replaceAll('&', '&amp;')
@@ -169,14 +92,40 @@
                 .replaceAll("'", '&#39;');
         }
 
-        function updateHeaderLoadingText(text) {
-            headerTitle.innerText = text;
+        function isVideoFile(name = '') {
+            const lower = name.toLowerCase();
+            return lower.endsWith('.mp4')
+                || lower.endsWith('.mov')
+                || lower.endsWith('.webm')
+                || lower.endsWith('.m4v');
         }
 
+        function mediaUrl(name) {
+            return `${API_BASE}/api/media/${encodeURIComponent(name)}`;
+        }
+
+        function downloadUrl(name) {
+            return `${API_BASE}/api/download/${encodeURIComponent(name)}`;
+        }
+
+        async function fetchJson(url, options = {}) {
+            const response = await fetch(url, {
+                cache: 'no-store',
+                ...options
+            });
+
+            if (!response.ok) {
+                throw new Error(`요청 실패: ${response.status}`);
+            }
+
+            return await response.json();
+        }
+
+        // =========================
         // 3. 초기화
+        // =========================
         function init() {
             updateDDay();
-            console.log('초기화 시작: 서버 연결 확인...');
             checkServerConnection();
         }
 
@@ -189,22 +138,25 @@
 
         async function checkServerConnection() {
             try {
-                const response = await fetchApi('/photos', {
-                    method: 'GET'
+                const response = await fetch(`${API_BASE}/health`, {
+                    method: 'GET',
+                    cache: 'no-store'
                 });
 
-                const contentType = response.headers.get('content-type') || '';
+                if (!response.ok) {
+                    throw new Error(`프록시 서버 연결 실패: ${response.status}`);
+                }
 
-                if (response.ok && contentType.includes('application/json')) {
-                    console.log('연결 성공!');
+                const health = await response.json();
+
+                if (health.ok) {
                     await loadPhotosFromServer();
                 } else {
-                    console.log('ngrok 경고 페이지 또는 비정상 응답 감지');
-                    renderConnectionGuide();
+                    renderConnectionGuide('사진 서버와 연결되지 않았습니다.');
                 }
             } catch (error) {
-                console.error('연결 실패 (CORS 또는 오프라인):', error);
-                renderConnectionGuide();
+                console.error('연결 실패:', error);
+                renderConnectionGuide(error.message);
             }
         }
 
@@ -218,17 +170,13 @@
                         <div class="text-5xl mb-6">🔒</div>
                         <h2 class="text-xl font-bold text-gray-800 mb-3">서버 연결이 필요해요</h2>
                         <p class="text-sm text-gray-500 mb-6 leading-relaxed">
-                            ngrok 연결 상태 또는 보안 페이지 때문에<br>
-                            사진을 바로 불러오지 못했습니다.
+                            프록시 서버 또는 내부 사진 서버에 연결하지 못했습니다.
                         </p>
                         ${
                             message
                                 ? `<p class="text-xs text-red-500 bg-red-50 rounded-xl px-3 py-2 mb-4">${escapeHtml(message)}</p>`
                                 : ''
                         }
-                        <button onclick="openNgrok()" class="w-full bg-pink-500 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all mb-3 text-lg">
-                            ngrok 주소 열기
-                        </button>
                         <button onclick="retryConnection()" class="w-full bg-gray-100 text-gray-600 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm">
                             다시 시도
                         </button>
@@ -237,54 +185,39 @@
             `;
         }
 
-        function openNgrok() {
-            window.open(API_BASE, '_blank', 'noopener,noreferrer');
-        }
-
         async function retryConnection() {
             timelineList.innerHTML = `<div class="text-center py-20 text-gray-400">다시 연결하는 중...</div>`;
             await checkServerConnection();
         }
 
-        // 4. 서버에서 사진 목록 로드
+        // =========================
+        // 4. 사진 목록 로드
+        // =========================
         async function loadPhotosFromServer() {
             try {
-                updateHeaderLoadingText('사진 불러오는 중...');
-                const response = await fetchApi('/photos', {
+                headerTitle.innerText = '사진 불러오는 중...';
+
+                const filenames = await fetchJson(`${API_BASE}/api/photos`, {
                     method: 'GET'
                 });
 
-                if (!response.ok) {
-                    throw new Error(`목록 요청 실패: ${response.status}`);
-                }
-
-                const contentType = response.headers.get('content-type') || '';
-                if (!contentType.includes('application/json')) {
-                    throw new Error('JSON이 아닌 응답이 왔습니다. ngrok 경고 페이지일 수 있습니다.');
-                }
-
-                const filenames = await response.json();
-
-                revokeAllBlobUrls();
                 photoData = {};
 
-                filenames.sort().reverse().forEach((name) => {
+                filenames.sort().reverse().forEach(name => {
                     const dateStr = `${name.substring(0, 4)}-${name.substring(4, 6)}-${name.substring(6, 8)}`;
                     const timeStr = `${name.substring(9, 11)}:${name.substring(11, 13)}`;
 
                     if (!photoData[dateStr]) photoData[dateStr] = [];
 
                     photoData[dateStr].push({
+                        src: mediaUrl(name),
+                        downloadUrl: downloadUrl(name),
                         name,
                         time: timeStr,
-                        path: buildMediaPath(name),
-                        isVideo: isVideoFile(name),
-                        blobUrl: null,
-                        loadError: false
+                        isVideo: isVideoFile(name)
                     });
                 });
 
-                await preloadTimelineThumbs();
                 renderTimeline();
             } catch (err) {
                 console.error(err);
@@ -292,26 +225,16 @@
             }
         }
 
-        async function preloadTimelineThumbs() {
-            const dates = Object.keys(photoData);
-            const preloadTargets = [];
-
-            dates.forEach((date) => {
-                const photos = photoData[date];
-                preloadTargets.push(...photos.slice(0, 3));
-            });
-
-            await ensurePhotoBlobUrls(preloadTargets);
-        }
-
+        // =========================
         // 5. 업로드
+        // =========================
         fab.onclick = () => fileInput.click();
 
         fileInput.onchange = async (e) => {
             const files = Array.from(e.target.files);
             if (files.length === 0) return;
 
-            updateHeaderLoadingText('업로드 중...');
+            headerTitle.innerText = '업로드 중...';
 
             for (const file of files) {
                 const photoDate = await getPhotoDate(file);
@@ -320,7 +243,7 @@
                 formData.append('taken_date', photoDate);
 
                 try {
-                    const response = await fetchApi('/upload', {
+                    const response = await fetch(`${API_BASE}/api/upload`, {
                         method: 'POST',
                         body: formData
                     });
@@ -334,7 +257,7 @@
                 }
             }
 
-            fileInput.value = '';
+            fileInput.value = "";
             await loadPhotosFromServer();
         };
 
@@ -342,6 +265,7 @@
             return new Promise((resolve) => {
                 EXIF.getData(file, function () {
                     const dateStr = EXIF.getTag(this, 'DateTimeOriginal');
+
                     if (dateStr) {
                         resolve(dateStr.replace(/:/g, '').replace(' ', '_'));
                     } else {
@@ -356,29 +280,15 @@
             });
         }
 
+        // =========================
         // 6. 타임라인 렌더링
+        // =========================
         function getMediaTag(photo, isSmall = false) {
-            if (photo.loadError) {
-                return `
-                    <div class="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-xs">
-                        불러오기 실패
-                    </div>
-                `;
-            }
-
-            if (!photo.blobUrl) {
-                return `
-                    <div class="w-full h-full flex items-center justify-center bg-gray-50 text-gray-400 text-xs">
-                        로딩 중...
-                    </div>
-                `;
-            }
-
             if (photo.isVideo) {
                 return `
                     <div class="relative w-full h-full">
                         <video
-                            src="${photo.blobUrl}"
+                            src="${photo.src}"
                             preload="metadata"
                             playsinline
                             muted
@@ -391,7 +301,13 @@
                 `;
             }
 
-            return `<img src="${photo.blobUrl}" class="w-full h-full object-cover saveable-image" loading="lazy">`;
+            return `
+                <img
+                    src="${photo.src}"
+                    class="w-full h-full object-cover saveable-image"
+                    loading="lazy"
+                >
+            `;
         }
 
         function renderTimeline() {
@@ -410,7 +326,7 @@
                 return;
             }
 
-            sortedDates.forEach((date) => {
+            sortedDates.forEach(date => {
                 const photos = photoData[date];
                 const section = document.createElement('section');
                 section.className = 'flex space-x-4 cursor-pointer animate-fade-in';
@@ -444,46 +360,35 @@
             });
         }
 
-        // 7. 상세 렌더링
-        async function renderDetail(date) {
-            timelineList.innerHTML = `<div class="text-center py-20 text-gray-400">상세 사진을 불러오는 중...</div>`;
+        // =========================
+        // 7. 상세 보기
+        // =========================
+        function renderDetail(date) {
+            timelineList.innerHTML = '';
             document.getElementById('timeline-line').style.display = 'none';
             backBtn.classList.remove('hidden');
             headerTitle.innerText = date;
 
-            const photos = photoData[date] || [];
-            await ensurePhotoBlobUrls(photos);
-
             const detailContainer = document.createElement('div');
             detailContainer.className = 'space-y-6';
 
-            photos.forEach((photo, idx) => {
-                let mediaHtml = '';
-
-                if (photo.loadError) {
-                    mediaHtml = `
-                        <div class="w-full aspect-video bg-gray-100 flex items-center justify-center text-gray-400">
-                            파일을 불러오지 못했습니다.
-                        </div>
-                    `;
-                } else if (photo.isVideo) {
-                    mediaHtml = `
+            (photoData[date] || []).forEach((photo, idx) => {
+                const mediaHtml = photo.isVideo
+                    ? `
                         <video
-                            src="${photo.blobUrl}"
+                            src="${photo.src}"
                             controls
                             playsinline
                             class="w-full h-auto bg-black"
                         ></video>
-                    `;
-                } else {
-                    mediaHtml = `
+                    `
+                    : `
                         <img
-                            src="${photo.blobUrl}"
+                            src="${photo.src}"
                             class="w-full h-auto saveable-image cursor-pointer"
                             onclick="downloadImage('${encodeURIComponent(photo.name)}')"
                         >
                     `;
-                }
 
                 detailContainer.innerHTML += `
                     <div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 pb-2 mb-6">
@@ -496,17 +401,18 @@
                 `;
             });
 
-            timelineList.innerHTML = '';
             timelineList.appendChild(detailContainer);
             window.scrollTo(0, 0);
         }
 
+        // =========================
         // 8. 다운로드 / 공유
+        // =========================
         function findPhotoByEncodedName(encodedName) {
             const decodedName = decodeURIComponent(encodedName);
 
             for (const date of Object.keys(photoData)) {
-                const found = photoData[date].find((photo) => photo.name === decodedName);
+                const found = photoData[date].find(photo => photo.name === decodedName);
                 if (found) return found;
             }
 
@@ -515,14 +421,27 @@
 
         async function downloadImage(encodedName) {
             const photo = findPhotoByEncodedName(encodedName);
+
             if (!photo) {
                 alert('파일 정보를 찾을 수 없습니다.');
                 return;
             }
 
             try {
-                const blob = await fetchBlob(photo.path);
-                const file = new File([blob], photo.name, { type: blob.type || 'application/octet-stream' });
+                const response = await fetch(photo.downloadUrl, {
+                    method: 'GET'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`다운로드 실패: ${response.status}`);
+                }
+
+                const blob = await response.blob();
+                const file = new File(
+                    [blob],
+                    photo.name,
+                    { type: blob.type || 'application/octet-stream' }
+                );
 
                 if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                     try {
@@ -554,14 +473,15 @@
             URL.revokeObjectURL(url);
         }
 
+        // =========================
         // 9. 이벤트
+        // =========================
         backBtn.onclick = renderTimeline;
 
+        // =========================
         // 10. 시작
+        // =========================
         init();
-
-        // 11. 페이지 종료 시 blob 정리
-        window.addEventListener('beforeunload', revokeAllBlobUrls);
     </script>
 </body>
 </html>

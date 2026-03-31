@@ -10,10 +10,9 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
         .photo-grid { display: grid; gap: 8px; width: 100%; aspect-ratio: 16/9; }
-        .saveable-image {
-            -webkit-touch-callout: default !important;
-            display: block;
-        }
+        /* 아이폰에서 사진 길게 눌러 저장 가능하도록 설정 */
+        .saveable-image { -webkit-touch-callout: default !important; display: block; }
+        video { background: #000; }
     </style>
 </head>
 <body class="bg-gray-50 font-sans mb-24">
@@ -23,9 +22,7 @@
             <button id="back-btn" class="hidden text-2xl p-2 hover:bg-gray-100 rounded-full transition-all">←</button>
             <div>
                 <h1 id="header-title" class="text-xl font-bold text-gray-800">하진이 성장 앨범</h1>
-                <p id="d-day-display" class="text-xs text-pink-500 font-bold bg-pink-50 px-2 py-0.5 rounded-full inline-block mt-1">
-                    태어난 지 +0일
-                </p>
+                <p id="d-day-display" class="text-xs text-pink-500 font-bold bg-pink-50 px-2 py-0.5 rounded-full inline-block mt-1">태어난 지 +0일</p>
             </div>
         </div>
         <div class="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center text-2xl border-2 border-white shadow-sm">👶</div>
@@ -33,7 +30,6 @@
 
     <main id="main-container" class="max-w-md mx-auto p-4 relative">
         <div id="timeline-line" class="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200 z-0"></div>
-
         <div id="timeline-list" class="space-y-10 relative z-10">
             <div class="text-center py-20 text-gray-400">사진 데이터를 불러오는 중...</div>
         </div>
@@ -46,7 +42,7 @@
     </button>
 
     <script>
-        // 1. 기본 설정 및 변수
+        // --- 1. 설정 및 변수 ---
         const BIRTH_DATE = new Date("2026-01-16");
         const API_BASE = "https://wallpapers-locate-prepare-railway.trycloudflare.com";
         let photoData = {};
@@ -57,10 +53,9 @@
         const backBtn = document.getElementById('back-btn');
         const headerTitle = document.getElementById('header-title');
 
-        // 2. 초기화 함수 (가장 먼저 실행됨)
+        // --- 2. 초기화 및 데이터 로드 ---
         function init() {
             updateDDay();
-            console.log("하진이 사진첩 로딩 시작...");
             loadPhotosFromServer();
         }
 
@@ -71,62 +66,10 @@
             document.getElementById('d-day-display').innerText = `태어난 지 +${diffDays}일`;
         }
 
-        async function checkServerConnection() {
-            try {
-                // 시크릿 모드 대응을 위해 mode: 'cors' 추가
-                const response = await fetch(`${API_BASE}/photos`, {
-                    method: 'GET',
-                    headers: { 'ngrok-skip-browser-warning': 'true' },
-                    mode: 'cors',
-                    cache: "no-store"
-                });
-
-                const contentType = response.headers.get("content-type");
-
-                if (response.ok && contentType && contentType.includes("application/json")) {
-                    console.log("연결 성공!");
-                    loadPhotosFromServer();
-                } else {
-                    console.log("ngrok 경고 페이지 감지");
-                    renderConnectionGuide();
-                }
-            } catch (error) {
-                console.error("연결 실패 (CORS 또는 오프라인):", error);
-                renderConnectionGuide();
-            }
-        }
-
-        function renderConnectionGuide() {
-            const line = document.getElementById('timeline-line');
-            if(line) line.style.display = 'none';
-
-            timelineList.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-10 px-4 animate-fade-in text-center">
-                    <div class="bg-white p-8 rounded-[32px] shadow-xl border border-pink-100 max-w-sm w-full">
-                        <div class="text-5xl mb-6">🔒</div>
-                        <h2 class="text-xl font-bold text-gray-800 mb-3">연결 승인이 필요해요</h2>
-                        <p class="text-sm text-gray-500 mb-8 leading-relaxed">
-                            하진이의 사진을 안전하게 가져오기 위해<br>보안 승인이 한 번 필요합니다.
-                        </p>
-                        <button onclick="openNgrok()" class="w-full bg-pink-500 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all mb-3 text-lg">
-                            1. 서버 승인하기
-                        </button>
-                        <button onclick="location.reload()" class="w-full bg-gray-100 text-gray-600 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm">
-                            2. 승인 완료 후 새로고침
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-
         async function loadPhotosFromServer() {
             try {
-                const response = await fetch(`${API_BASE}/photos`, {
-                    method: 'GET'
-                    // headers 부분이 비어있어도 됩니다. Cloudflare는 표준 CORS를 따릅니다.
-                });
-
-                if (!response.ok) throw new Error("네트워크 응답 에러");
+                const response = await fetch(`${API_BASE}/photos`, { cache: "no-store" });
+                if (!response.ok) throw new Error("서버 응답 없음");
 
                 const filenames = await response.json();
                 photoData = {};
@@ -134,6 +77,7 @@
                 filenames.sort().reverse().forEach(name => {
                     const dateStr = `${name.substring(0, 4)}-${name.substring(4, 6)}-${name.substring(6, 8)}`;
                     const timeStr = `${name.substring(9, 11)}:${name.substring(11, 13)}`;
+
                     if (!photoData[dateStr]) photoData[dateStr] = [];
                     photoData[dateStr].push({
                         src: `${API_BASE}/data/${name}`,
@@ -143,47 +87,39 @@
                 });
                 renderTimeline();
             } catch (err) {
-                console.error("로딩 에러:", err);
-                timelineList.innerHTML = `<div class="text-center py-20 text-gray-400 font-bold">서버가 잠시 꺼져있어요. 👶<br><span class="text-xs font-normal">맥북의 app.py와 cloudflared를 확인해주세요.</span></div>`;
+                console.error(err);
+                timelineList.innerHTML = `<div class="text-center py-20 text-gray-400 font-bold">서버 연결에 실패했습니다. 👶<br><span class="text-xs font-normal">Cloudflare 터널 상태를 확인해주세요.</span></div>`;
             }
         }
 
-        // 업로드 및 기타 함수들 (기존과 동일)
+        // --- 3. 사진/영상 업로드 로직 ---
         fab.onclick = () => fileInput.click();
+
         fileInput.onchange = async (e) => {
             const files = Array.from(e.target.files);
             if (files.length === 0) return;
 
-            // 업로드 중 알림
-            headerTitle.innerText = "🚀 업로드 중... (잠시만 기다려주세요)";
-            fab.disabled = true; // 중복 클릭 방지
+            headerTitle.innerText = "🚀 업로드 중...";
+            fab.disabled = true;
             fab.classList.add('opacity-50');
 
             for (const file of files) {
                 const formData = new FormData();
-                // 서버의 'photo' 키와 일치해야 함
                 formData.append('photo', file);
-
-                // 날짜 추출 (기존 함수 활용)
                 const photoDate = await getPhotoDate(file);
                 formData.append('taken_date', photoDate);
 
                 try {
                     const response = await fetch(`${API_BASE}/upload`, {
                         method: 'POST',
-                        // 주의: Cloudflare 사용 시 헤더에 아무것도 넣지 마세요 (FormData가 자동 처리)
-                        body: formData
+                        body: formData // Content-Type은 브라우저가 자동 설정함
                     });
-
-                    if (!response.ok) throw new Error("업로드 실패");
-                    console.log(`${file.name} 업로드 완료`);
+                    if (!response.ok) throw new Error();
                 } catch (err) {
-                    console.error("에러 발생:", err);
-                    alert(`${file.name} 업로드에 실패했습니다. 용량이 너무 큰지 확인해주세요.`);
+                    alert(`${file.name} 업로드 실패!`);
                 }
             }
 
-            // 초기화
             headerTitle.innerText = "하진이 성장 앨범";
             fab.disabled = false;
             fab.classList.remove('opacity-50');
@@ -209,16 +145,16 @@
             });
         }
 
+        // --- 4. 화면 렌더링 (타임라인 & 상세) ---
         function renderTimeline() {
             timelineList.innerHTML = '';
-            const line = document.getElementById('timeline-line');
-            if(line) line.style.display = 'block';
+            document.getElementById('timeline-line').style.display = 'block';
             backBtn.classList.add('hidden');
             headerTitle.innerText = "하진이 성장 앨범";
 
             const sortedDates = Object.keys(photoData).sort().reverse();
             if (sortedDates.length === 0) {
-                timelineList.innerHTML = `<div class="text-center py-20 text-gray-400">기록이 없습니다.</div>`;
+                timelineList.innerHTML = `<div class="text-center py-20 text-gray-400">첫 기록을 남겨보세요.</div>`;
                 return;
             }
 
@@ -250,7 +186,7 @@
 
                 section.innerHTML = `
                     <div class="w-8 h-8 bg-pink-400 rounded-full border-4 border-white shadow-sm flex-shrink-0 mt-1"></div>
-                    <div class="flex-1 bg-white p-4 rounded-3xl shadow-sm border border-gray-50">
+                    <div class="flex-1 bg-white p-4 rounded-3xl shadow-sm border border-gray-50 hover:shadow-md transition-all">
                         <div class="flex justify-between items-center mb-3">
                             <span class="font-bold text-gray-800">${date}</span>
                             <span class="text-xs text-gray-400">${photos.length}개의 기록</span>
@@ -267,32 +203,39 @@
             document.getElementById('timeline-line').style.display = 'none';
             backBtn.classList.remove('hidden');
             headerTitle.innerText = date;
+
             const detailContainer = document.createElement('div');
-            detailContainer.className = "space-y-6";
+            detailContainer.className = "space-y-6 animate-fade-in";
+
             photoData[date].forEach((photo, idx) => {
                 const isVideo = photo.src.toLowerCase().endsWith('.mp4') || photo.src.toLowerCase().endsWith('.mov');
                 const mediaHtml = isVideo
-                    ? `<video src="${photo.src}" controls class="w-full h-auto"></video>`
-                    : `<img src="${photo.src}" class="w-full h-auto" onclick="downloadImage('${photo.src}', '${photo.name}')">`;
-                detailContainer.innerHTML += `<div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 pb-2 mb-6">
+                    ? `<video src="${photo.src}" controls playsinline class="w-full h-auto rounded-t-3xl"></video>`
+                    : `<img src="${photo.src}" class="w-full h-auto saveable-image" onclick="downloadImage('${photo.src}', '${photo.name}')">`;
+
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 pb-2 mb-6";
+                card.innerHTML = `
                     ${mediaHtml}
                     <div class="p-5 flex justify-between items-center">
                         <p class="text-xs font-bold text-pink-500">${isVideo ? '🎥 Video' : '📸 Moment'} ${idx + 1}</p>
                         <span class="text-xs text-gray-400">${photo.time}</span>
                     </div>
-                </div>`;
+                `;
+                detailContainer.appendChild(card);
             });
             timelineList.appendChild(detailContainer);
             window.scrollTo(0, 0);
         }
 
+        // --- 5. 다운로드 및 공유 기능 ---
         async function downloadImage(imageSrc, fileName) {
             if (navigator.share) {
                 try {
                     const response = await fetch(imageSrc);
                     const blob = await response.blob();
                     const file = new File([blob], fileName, { type: blob.type });
-                    await navigator.share({ files: [file], title: '하진이 사진' });
+                    await navigator.share({ files: [file], title: '하진이 사진 기록' });
                 } catch (err) { performDownload(imageSrc, fileName); }
             } else { performDownload(imageSrc, fileName); }
         }
@@ -303,7 +246,7 @@
 
         backBtn.onclick = renderTimeline;
 
-        // [핵심] 페이지 로드 시 즉시 실행
+        // 시작!
         init();
     </script>
 </body>

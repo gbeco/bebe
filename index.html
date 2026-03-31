@@ -48,7 +48,7 @@
     <script>
         // 1. 기본 설정 및 변수
         const BIRTH_DATE = new Date("2026-01-16");
-        const API_BASE = "https://adelynn-subacrodrome-instructedly.ngrok-free.dev";
+        const API_BASE = "https://wallpapers-locate-prepare-railway.trycloudflare.com";
         let photoData = {};
 
         const fileInput = document.getElementById('file-input');
@@ -60,8 +60,8 @@
         // 2. 초기화 함수 (가장 먼저 실행됨)
         function init() {
             updateDDay();
-            console.log("초기화 시작: 서버 연결 확인...");
-            checkServerConnection();
+            console.log("하진이 사진첩 로딩 시작...");
+            loadPhotosFromServer();
         }
 
         function updateDDay() {
@@ -119,17 +119,15 @@
             `;
         }
 
-        function openNgrok() {
-            window.open(API_BASE, '_blank');
-        }
-
         async function loadPhotosFromServer() {
             try {
                 const response = await fetch(`${API_BASE}/photos`, {
-                    method: 'GET',
-                    headers: { 'ngrok-skip-browser-warning': 'true' },
-                    mode: 'cors'
+                    method: 'GET'
+                    // headers 부분이 비어있어도 됩니다. Cloudflare는 표준 CORS를 따릅니다.
                 });
+
+                if (!response.ok) throw new Error("네트워크 응답 에러");
+
                 const filenames = await response.json();
                 photoData = {};
 
@@ -145,7 +143,8 @@
                 });
                 renderTimeline();
             } catch (err) {
-                renderConnectionGuide();
+                console.error("로딩 에러:", err);
+                timelineList.innerHTML = `<div class="text-center py-20 text-gray-400 font-bold">서버가 잠시 꺼져있어요. 👶<br><span class="text-xs font-normal">맥북의 app.py와 cloudflared를 확인해주세요.</span></div>`;
             }
         }
 

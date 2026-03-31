@@ -4,7 +4,13 @@ from pathlib import Path
 import requests
 
 app = Flask(__name__, static_folder=".", static_url_path="")
-CORS(app)
+CORS(app, resources={
+    r"/api/*": {"origins": ["https://gbeco.github.io"]},
+    r"/photos": {"origins": ["https://gbeco.github.io"]},
+    r"/upload": {"origins": ["https://gbeco.github.io"]},
+    r"/data/*": {"origins": ["https://gbeco.github.io"]},
+    r"/health": {"origins": ["https://gbeco.github.io"]}
+})
 
 UPSTREAM = "http://127.0.0.1:5001"
 TIMEOUT = 60

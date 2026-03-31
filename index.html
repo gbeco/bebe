@@ -166,9 +166,21 @@
 
                 const getMediaTag = (photo, isSmall = false) => {
                     const isVideo = photo.src.toLowerCase().endsWith('.mp4') || photo.src.toLowerCase().endsWith('.mov');
-                    return isVideo
-                        ? `<div class="relative w-full h-full"><video src="${photo.src}" preload="metadata" class="w-full h-full object-cover"></video><div class="absolute inset-0 bg-black/20 flex items-center justify-center text-white ${isSmall ? 'text-xs' : 'text-xl'}">▶️</div></div>`
-                        : `<img src="${photo.src}" class="w-full h-full object-cover">`;
+                    if (isVideo) {
+                        return `
+                            <div class="relative w-full h-full bg-black">
+                                <video src="${photo.src}"
+                                       preload="metadata"
+                                       playsinline
+                                       muted
+                                       class="w-full h-full object-cover"></video>
+                                <div class="absolute inset-0 bg-black/20 flex items-center justify-center text-white ${isSmall ? 'text-xs' : 'text-xl'}">
+                                    ▶️
+                                </div>
+                            </div>`;
+                    } else {
+                        return `<img src="${photo.src}" class="w-full h-full object-cover">`;
+                    }
                 };
 
                 let photoMarkup = photos.length === 1

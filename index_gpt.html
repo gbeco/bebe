@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>하진이 성장 앨범</title>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .photo-grid {
+            display: grid;
+            gap: 8px;
+            width: 100%;
+            aspect-ratio: 16/9;
+        }
+
+        .saveable-image {
+            -webkit-touch-callout: default !important;
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans mb-24">
+
+    <header class="bg-white/80 backdrop-blur-md p-6 shadow-sm sticky top-0 z-30 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <button id="back-btn" class="hidden text-2xl p-2 hover:bg-gray-100 rounded-full transition-all">←</button>
+            <div>
+                <h1 id="header-title" class="text-xl font-bold text-gray-800">하진이 성장 앨범</h1>
+                <p id="d-day-display" class="text-xs text-pink-500 font-bold bg-pink-50 px-2 py-0.5 rounded-full inline-block mt-1">
+                    태어난 지 +0일
+                </p>
+            </div>
+        </div>
+        <div class="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center text-2xl border-2 border-white shadow-sm">👶</div>
+    </header>
+
+    <main id="main-container" class="max-w-md mx-auto p-4 relative">
+        <div id="timeline-line" class="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200 z-0"></div>
+
+        <div id="timeline-list" class="space-y-10 relative z-10">
+            <div class="text-center py-20 text-gray-400">사진 데이터를 불러오는 중...</div>
+        </div>
+    </main>
+
+    <input type="file" id="file-input" accept="image/*, video/*" class="hidden" multiple>
+
+    <button id="fab" class="fixed bottom-8 right-8 w-16 h-16 bg-pink-500 text-white rounded-full shadow-2xl text-4xl flex items-center justify-center active:scale-90 hover:bg-pink-600 transition-all z-40">
+        +
+    </button>
+
+    <script>
+        // 1. 기본 설정 및 변수
+        const BIRTH_DATE = new Date("2026-01-16");
+        const API_BASE = "https://adelynn-subacrodrome-instructedly.ngrok-free.dev";
+
+        let photoData = {};
+        const mediaBlobUrlCache = new Map();
+
+        const fileInput = document.getElementById('file-input');
+        const fab = document.getElementById('fab');
+        const timelineList = document.getElementById('timeline-list');
+        const backBtn = document.getElementById('back-btn');
+        const headerTitle = document.getElementById('header-title');
+
+        // 2. 공통 유틸
+        function getNgrokHeaders() {
+            return {
+                'ngrok-skip-browser-warning': 'true'
+            };
+        }
+
+        function isVideoFile(name = '') {
+            const lower = name.toLowerCase();
+            return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.m4v');
+        }
+
+        function buildMediaPath(fileName) {
+            return `/data/${encodeURIComponent(fileName)}`;
+        }
+
+        function revokeAllBlobUrls() {
+            for (const url of mediaBlobUrlCache.values()) {
+                try {
+                    URL.revokeObjectURL(url);
+                } catch (e) {
+                    console.warn('blob URL 해제 실패:', e);
+                }
+            }
+            mediaBlobUrlCache.clear();
+        }
+
+        async function fetchApi(path, options = {}) {
+            const response = await fetch(`${API_BASE}${path}`, {
+                ...options,
+                mode: 'cors',
+                cache: options.cache || 'no-store',
+                headers: {
+                    ...getNgrokHeaders(),
+                    ...(options.headers || {})
+                }
+            });
+
+            return response;
+        }
+
+        async function fetchBlob(path) {
+            const response = await fetchApi(path, {
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                throw new Error(`파일 요청 실패: ${response.status}`);
+            }
+
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('text/html')) {
+                throw new Error('ngrok 경고 페이지 또는 HTML 응답이 반환되었습니다.');
+            }
+
+            return await response.blob();
+        }
+
+        async function getBlobUrlForPhoto(photo) {
+            if (photo.blobUrl) return photo.blobUrl;
+
+            const cacheKey = photo.path;
+            if (mediaBlobUrlCache.has(cacheKey)) {
+                photo.blobUrl = mediaBlobUrlCache.get(cacheKey);
+                return photo.blobUrl;
+            }
+
+            const blob = await fetchBlob(photo.path);
+            const blobUrl = URL.createObjectURL(blob);
+
+            mediaBlobUrlCache.set(cacheKey, blobUrl);
+            photo.blobUrl = blobUrl;
+            return blobUrl;
+        }
+
+        async function ensurePhotoBlobUrls(photos = []) {
+            await Promise.all(
+                photos.map(async (photo) => {
+                    try {
+                        await getBlobUrlForPhoto(photo);
+                    } catch (error) {
+                        console.error(`미디어 로드 실패: ${photo.name}`, error);
+                        photo.loadError = true;
+                    }
+                })
+            );
+        }
+
+        function escapeHtml(text = '') {
+            return String(text)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        function updateHeaderLoadingText(text) {
+            headerTitle.innerText = text;
+        }
+
+        // 3. 초기화
+        function init() {
+            updateDDay();
+            console.log('초기화 시작: 서버 연결 확인...');
+            checkServerConnection();
+        }
+
+        function updateDDay() {
+            const today = new Date();
+            const diffTime = today.getTime() - BIRTH_DATE.getTime();
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            document.getElementById('d-day-display').innerText = `태어난 지 +${diffDays}일`;
+        }
+
+        async function checkServerConnection() {
+            try {
+                const response = await fetchApi('/photos', {
+                    method: 'GET'
+                });
+
+                const contentType = response.headers.get('content-type') || '';
+
+                if (response.ok && contentType.includes('application/json')) {
+                    console.log('연결 성공!');
+                    await loadPhotosFromServer();
+                } else {
+                    console.log('ngrok 경고 페이지 또는 비정상 응답 감지');
+                    renderConnectionGuide();
+                }
+            } catch (error) {
+                console.error('연결 실패 (CORS 또는 오프라인):', error);
+                renderConnectionGuide();
+            }
+        }
+
+        function renderConnectionGuide(message = '') {
+            const line = document.getElementById('timeline-line');
+            if (line) line.style.display = 'none';
+
+            timelineList.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-10 px-4 animate-fade-in text-center">
+                    <div class="bg-white p-8 rounded-[32px] shadow-xl border border-pink-100 max-w-sm w-full">
+                        <div class="text-5xl mb-6">🔒</div>
+                        <h2 class="text-xl font-bold text-gray-800 mb-3">서버 연결이 필요해요</h2>
+                        <p class="text-sm text-gray-500 mb-6 leading-relaxed">
+                            ngrok 연결 상태 또는 보안 페이지 때문에<br>
+                            사진을 바로 불러오지 못했습니다.
+                        </p>
+                        ${
+                            message
+                                ? `<p class="text-xs text-red-500 bg-red-50 rounded-xl px-3 py-2 mb-4">${escapeHtml(message)}</p>`
+                                : ''
+                        }
+                        <button onclick="openNgrok()" class="w-full bg-pink-500 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all mb-3 text-lg">
+                            ngrok 주소 열기
+                        </button>
+                        <button onclick="retryConnection()" class="w-full bg-gray-100 text-gray-600 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm">
+                            다시 시도
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function openNgrok() {
+            window.open(API_BASE, '_blank', 'noopener,noreferrer');
+        }
+
+        async function retryConnection() {
+            timelineList.innerHTML = `<div class="text-center py-20 text-gray-400">다시 연결하는 중...</div>`;
+            await checkServerConnection();
+        }
+
+        // 4. 서버에서 사진 목록 로드
+        async function loadPhotosFromServer() {
+            try {
+                updateHeaderLoadingText('사진 불러오는 중...');
+                const response = await fetchApi('/photos', {
+                    method: 'GET'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`목록 요청 실패: ${response.status}`);
+                }
+
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    throw new Error('JSON이 아닌 응답이 왔습니다. ngrok 경고 페이지일 수 있습니다.');
+                }
+
+                const filenames = await response.json();
+
+                revokeAllBlobUrls();
+                photoData = {};
+
+                filenames.sort().reverse().forEach((name) => {
+                    const dateStr = `${name.substring(0, 4)}-${name.substring(4, 6)}-${name.substring(6, 8)}`;
+                    const timeStr = `${name.substring(9, 11)}:${name.substring(11, 13)}`;
+
+                    if (!photoData[dateStr]) photoData[dateStr] = [];
+
+                    photoData[dateStr].push({
+                        name,
+                        time: timeStr,
+                        path: buildMediaPath(name),
+                        isVideo: isVideoFile(name),
+                        blobUrl: null,
+                        loadError: false
+                    });
+                });
+
+                await preloadTimelineThumbs();
+                renderTimeline();
+            } catch (err) {
+                console.error(err);
+                renderConnectionGuide(err.message);
+            }
+        }
+
+        async function preloadTimelineThumbs() {
+            const dates = Object.keys(photoData);
+            const preloadTargets = [];
+
+            dates.forEach((date) => {
+                const photos = photoData[date];
+                preloadTargets.push(...photos.slice(0, 3));
+            });
+
+            await ensurePhotoBlobUrls(preloadTargets);
+        }
+
+        // 5. 업로드
+        fab.onclick = () => fileInput.click();
+
+        fileInput.onchange = async (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+
+            updateHeaderLoadingText('업로드 중...');
+
+            for (const file of files) {
+                const photoDate = await getPhotoDate(file);
+                const formData = new FormData();
+                formData.append('photo', file);
+                formData.append('taken_date', photoDate);
+
+                try {
+                    const response = await fetchApi('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`업로드 실패: ${file.name} (${response.status})`);
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert(`업로드 중 오류가 발생했습니다.\n${file.name}`);
+                }
+            }
+
+            fileInput.value = '';
+            await loadPhotosFromServer();
+        };
+
+        function getPhotoDate(file) {
+            return new Promise((resolve) => {
+                EXIF.getData(file, function () {
+                    const dateStr = EXIF.getTag(this, 'DateTimeOriginal');
+                    if (dateStr) {
+                        resolve(dateStr.replace(/:/g, '').replace(' ', '_'));
+                    } else {
+                        const lastMod = new Date(file.lastModified);
+                        const year = lastMod.getFullYear();
+                        const month = String(lastMod.getMonth() + 1).padStart(2, '0');
+                        const day = String(lastMod.getDate()).padStart(2, '0');
+                        const time = lastMod.toTimeString().split(' ')[0].replace(/:/g, '');
+                        resolve(`${year}${month}${day}_${time}`);
+                    }
+                });
+            });
+        }
+
+        // 6. 타임라인 렌더링
+        function getMediaTag(photo, isSmall = false) {
+            if (photo.loadError) {
+                return `
+                    <div class="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-xs">
+                        불러오기 실패
+                    </div>
+                `;
+            }
+
+            if (!photo.blobUrl) {
+                return `
+                    <div class="w-full h-full flex items-center justify-center bg-gray-50 text-gray-400 text-xs">
+                        로딩 중...
+                    </div>
+                `;
+            }
+
+            if (photo.isVideo) {
+                return `
+                    <div class="relative w-full h-full">
+                        <video
+                            src="${photo.blobUrl}"
+                            preload="metadata"
+                            playsinline
+                            muted
+                            class="w-full h-full object-cover"
+                        ></video>
+                        <div class="absolute inset-0 bg-black/20 flex items-center justify-center text-white ${isSmall ? 'text-xs' : 'text-xl'}">
+                            ▶️
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `<img src="${photo.blobUrl}" class="w-full h-full object-cover saveable-image" loading="lazy">`;
+        }
+
+        function renderTimeline() {
+            timelineList.innerHTML = '';
+
+            const line = document.getElementById('timeline-line');
+            if (line) line.style.display = 'block';
+
+            backBtn.classList.add('hidden');
+            headerTitle.innerText = '하진이 성장 앨범';
+
+            const sortedDates = Object.keys(photoData).sort().reverse();
+
+            if (sortedDates.length === 0) {
+                timelineList.innerHTML = `<div class="text-center py-20 text-gray-400">기록이 없습니다.</div>`;
+                return;
+            }
+
+            sortedDates.forEach((date) => {
+                const photos = photoData[date];
+                const section = document.createElement('section');
+                section.className = 'flex space-x-4 cursor-pointer animate-fade-in';
+                section.onclick = () => renderDetail(date);
+
+                let photoMarkup = photos.length === 1
+                    ? `<div class="w-full aspect-video rounded-2xl overflow-hidden border">${getMediaTag(photos[0])}</div>`
+                    : `<div class="grid grid-cols-2 gap-2 w-full aspect-video">
+                        <div class="rounded-2xl overflow-hidden border">${getMediaTag(photos[0])}</div>
+                        <div class="grid grid-rows-2 gap-2">
+                            <div class="rounded-xl overflow-hidden border">${getMediaTag(photos[1], true)}</div>
+                            <div class="rounded-xl overflow-hidden relative border bg-gray-50">
+                                ${photos[2] ? getMediaTag(photos[2], true) : ''}
+                                ${photos.length > 2 ? `<div class="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-xs font-bold">+${photos.length - 2}</div>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+
+                section.innerHTML = `
+                    <div class="w-8 h-8 bg-pink-400 rounded-full border-4 border-white shadow-sm flex-shrink-0 mt-1"></div>
+                    <div class="flex-1 bg-white p-4 rounded-3xl shadow-sm border border-gray-50">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="font-bold text-gray-800">${date}</span>
+                            <span class="text-xs text-gray-400">${photos.length}개의 기록</span>
+                        </div>
+                        ${photoMarkup}
+                    </div>
+                `;
+
+                timelineList.appendChild(section);
+            });
+        }
+
+        // 7. 상세 렌더링
+        async function renderDetail(date) {
+            timelineList.innerHTML = `<div class="text-center py-20 text-gray-400">상세 사진을 불러오는 중...</div>`;
+            document.getElementById('timeline-line').style.display = 'none';
+            backBtn.classList.remove('hidden');
+            headerTitle.innerText = date;
+
+            const photos = photoData[date] || [];
+            await ensurePhotoBlobUrls(photos);
+
+            const detailContainer = document.createElement('div');
+            detailContainer.className = 'space-y-6';
+
+            photos.forEach((photo, idx) => {
+                let mediaHtml = '';
+
+                if (photo.loadError) {
+                    mediaHtml = `
+                        <div class="w-full aspect-video bg-gray-100 flex items-center justify-center text-gray-400">
+                            파일을 불러오지 못했습니다.
+                        </div>
+                    `;
+                } else if (photo.isVideo) {
+                    mediaHtml = `
+                        <video
+                            src="${photo.blobUrl}"
+                            controls
+                            playsinline
+                            class="w-full h-auto bg-black"
+                        ></video>
+                    `;
+                } else {
+                    mediaHtml = `
+                        <img
+                            src="${photo.blobUrl}"
+                            class="w-full h-auto saveable-image cursor-pointer"
+                            onclick="downloadImage('${encodeURIComponent(photo.name)}')"
+                        >
+                    `;
+                }
+
+                detailContainer.innerHTML += `
+                    <div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 pb-2 mb-6">
+                        ${mediaHtml}
+                        <div class="p-5 flex justify-between items-center">
+                            <p class="text-xs font-bold text-pink-500">${photo.isVideo ? '🎥 Video' : '📸 Moment'} ${idx + 1}</p>
+                            <span class="text-xs text-gray-400">${photo.time}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            timelineList.innerHTML = '';
+            timelineList.appendChild(detailContainer);
+            window.scrollTo(0, 0);
+        }
+
+        // 8. 다운로드 / 공유
+        function findPhotoByEncodedName(encodedName) {
+            const decodedName = decodeURIComponent(encodedName);
+
+            for (const date of Object.keys(photoData)) {
+                const found = photoData[date].find((photo) => photo.name === decodedName);
+                if (found) return found;
+            }
+
+            return null;
+        }
+
+        async function downloadImage(encodedName) {
+            const photo = findPhotoByEncodedName(encodedName);
+            if (!photo) {
+                alert('파일 정보를 찾을 수 없습니다.');
+                return;
+            }
+
+            try {
+                const blob = await fetchBlob(photo.path);
+                const file = new File([blob], photo.name, { type: blob.type || 'application/octet-stream' });
+
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({
+                            files: [file],
+                            title: '하진이 사진'
+                        });
+                        return;
+                    } catch (shareError) {
+                        console.warn('공유 실패, 다운로드로 전환:', shareError);
+                    }
+                }
+
+                performDownload(blob, photo.name);
+            } catch (err) {
+                console.error(err);
+                alert('다운로드에 실패했습니다.');
+            }
+        }
+
+        function performDownload(blob, fileName) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        // 9. 이벤트
+        backBtn.onclick = renderTimeline;
+
+        // 10. 시작
+        init();
+
+        // 11. 페이지 종료 시 blob 정리
+        window.addEventListener('beforeunload', revokeAllBlobUrls);
+    </script>
+</body>
+</html>

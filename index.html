@@ -74,8 +74,9 @@
         // 기존 window.onload에 추가
         window.addEventListener('load', () => {
             updateDDay();
-            loadPhotosFromServer();
+            checkServerConnection();
         });
+
 
         const API_BASE = "https://adelynn-subacrodrome-instructedly.ngrok-free.dev";
         let photoData = {}; // { "2026-03-31": [{src, name, time}, ...] }
@@ -85,6 +86,70 @@
         const timelineList = document.getElementById('timeline-list');
         const backBtn = document.getElementById('back-btn');
         const headerTitle = document.getElementById('header-title');
+
+        async function checkServerConnection() {
+            console.log("서버 연결 확인 시작...");
+            const timelineList = document.getElementById('timeline-list');
+
+            try {
+                // ngrok-skip 헤더를 넣어서 요청
+                const response = await fetch(`${API_BASE}/photos`, {
+                    method: 'GET',
+                    headers: { 'ngrok-skip-browser-warning': 'true' }
+                });
+
+                // 1. 응답이 왔더라도 JSON이 아니면 ngrok 경고 페이지임
+                const contentType = response.headers.get("content-type");
+                if (response.ok && contentType && contentType.includes("application/json")) {
+                    console.log("연결 성공: 데이터를 불러옵니다.");
+                    loadPhotosFromServer();
+                } else {
+                    console.log("연결 실패: ngrok 경고 페이지 감지.");
+                    renderConnectionGuide();
+                }
+            } catch (error) {
+                // 2. CORS 에러가 나면 바로 여기로 튕겨져 나옵니다.
+                console.log("CORS 에러 또는 네트워크 에러 발생 -> 팝업 실행");
+                renderConnectionGuide();
+            }
+        }
+
+        function renderConnectionGuide() {
+            const timelineList = document.getElementById('timeline-list');
+            // 타임라인 선 숨기기
+            const line = document.getElementById('timeline-line');
+            if(line) line.style.display = 'none';
+
+            timelineList.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-10 px-4 animate-fade-in">
+                    <div class="bg-white p-8 rounded-[32px] shadow-xl border border-pink-100 text-center max-w-sm w-full">
+                        <div class="text-5xl mb-6">🔒</div>
+                        <h2 class="text-xl font-bold text-gray-800 mb-3">연결 승인이 필요해요</h2>
+                        <p class="text-sm text-gray-500 mb-8 leading-relaxed">
+                            하진이의 사진을 안전하게 가져오기 위해<br>
+                            보안 승인이 한 번 필요합니다.
+                        </p>
+
+                        <button onclick="openNgrok()" class="w-full bg-pink-500 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all mb-3 text-lg">
+                            1. 서버 승인하기
+                        </button>
+
+                        <button onclick="location.reload()" class="w-full bg-gray-100 text-gray-600 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm">
+                            2. 승인 완료 후 새로고침
+                        </button>
+
+                        <p class="text-[11px] text-gray-400 mt-6 leading-tight">
+                            * 새 창에서 <span class="text-blue-500 font-bold underline">Visit Site</span> 버튼을 누른 뒤<br>이 화면으로 돌아와 새로고침 해주세요.
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function openNgrok() {
+            // ngrok 주소를 새 창으로 엽니다.
+            window.open(API_BASE, '_blank');
+        }
 
         // 1. 페이지 로드 시 서버에서 데이터 가져오기
         async function loadPhotosFromServer() {
@@ -152,7 +217,7 @@
 
             fileInput.value = "";
             await loadPhotosFromServer();
-            headerTitle.innerText = "하진이 타임라인";
+            headerTitle.innerText = "하진이 성장 앨범";
         };
 
         // 사진에서 날짜를 추출하는 함수
@@ -182,7 +247,7 @@
             timelineList.innerHTML = '';
             document.getElementById('timeline-line').classList.remove('hidden');
             backBtn.classList.add('hidden');
-            headerTitle.innerText = "하진이 타임라인";
+            headerTitle.innerText = "하진이 성장 앨범";
 
             const sortedDates = Object.keys(photoData).sort().reverse();
 

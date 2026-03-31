@@ -13,9 +13,26 @@
         /* 아이폰에서 사진 길게 눌러 저장 가능하도록 설정 */
         .saveable-image { -webkit-touch-callout: default !important; display: block; }
         video { background: #000; }
+        /* 로딩 오버레이 스타일 */
+        #upload-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 9999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 <body class="bg-gray-50 font-sans mb-24">
+    <div id="upload-overlay">
+        <div class="text-6xl animate-bounce mb-4">🚀</div>
+        <h2 class="text-xl font-bold text-gray-800">하진이 사진 업로드 중...</h2>
+        <p class="text-sm text-gray-500 mt-2">잠시만 기다려주세요!</p>
+    </div>
 
     <header class="bg-white/80 backdrop-blur-md p-6 shadow-sm sticky top-0 z-30 flex items-center justify-between">
         <div class="flex items-center space-x-3">
@@ -99,32 +116,39 @@
             const files = Array.from(e.target.files);
             if (files.length === 0) return;
 
-            headerTitle.innerText = "🚀 업로드 중...";
+            // 1. 로딩 오버레이 표시 (이게 뜨면서 아이폰 사진 폴더가 닫히도록 유도함)
+            const overlay = document.getElementById('upload-overlay');
+            overlay.style.display = 'flex';
             fab.disabled = true;
-            fab.classList.add('opacity-50');
 
-            for (const file of files) {
-                const formData = new FormData();
-                formData.append('photo', file);
-                const photoDate = await getPhotoDate(file);
-                formData.append('taken_date', photoDate);
+            // 2. 파일들을 하나씩 업로드
+            try {
+                for (const file of files) {
+                    const formData = new FormData();
+                    formData.append('photo', file);
 
-                try {
+                    const photoDate = await getPhotoDate(file);
+                    formData.append('taken_date', photoDate);
+
+                    // 서버 전송
                     const response = await fetch(`${API_BASE}/upload`, {
                         method: 'POST',
-                        body: formData // Content-Type은 브라우저가 자동 설정함
+                        body: formData
                     });
-                    if (!response.ok) throw new Error();
-                } catch (err) {
-                    alert(`${file.name} 업로드 실패!`);
-                }
-            }
 
-            headerTitle.innerText = "하진이 성장 앨범";
-            fab.disabled = false;
-            fab.classList.remove('opacity-50');
-            fileInput.value = "";
-            loadPhotosFromServer();
+                    if (!response.ok) throw new Error("업로드 실패");
+                }
+
+                console.log("모든 파일 업로드 완료");
+            } catch (err) {
+                alert("업로드 중 오류가 발생했습니다.");
+            } finally {
+                // 3. 완료 후 초기화 및 데이터 갱신
+                overlay.style.display = 'none';
+                fab.disabled = false;
+                fileInput.value = ""; // 다음 선택을 위해 초기화
+                loadPhotosFromServer();
+            }
         };
 
         function getPhotoDate(file) {

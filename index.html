@@ -153,20 +153,40 @@
         fileInput.onchange = async (e) => {
             const files = Array.from(e.target.files);
             if (files.length === 0) return;
-            headerTitle.innerText = "업로드 중...";
+
+            // 업로드 중 알림
+            headerTitle.innerText = "🚀 업로드 중... (잠시만 기다려주세요)";
+            fab.disabled = true; // 중복 클릭 방지
+            fab.classList.add('opacity-50');
+
             for (const file of files) {
-                const photoDate = await getPhotoDate(file);
                 const formData = new FormData();
+                // 서버의 'photo' 키와 일치해야 함
                 formData.append('photo', file);
+
+                // 날짜 추출 (기존 함수 활용)
+                const photoDate = await getPhotoDate(file);
                 formData.append('taken_date', photoDate);
+
                 try {
-                    await fetch(`${API_BASE}/upload`, {
+                    const response = await fetch(`${API_BASE}/upload`, {
                         method: 'POST',
-                        headers: { 'ngrok-skip-browser-warning': 'true' },
+                        // 주의: Cloudflare 사용 시 헤더에 아무것도 넣지 마세요 (FormData가 자동 처리)
                         body: formData
                     });
-                } catch (err) { console.error(err); }
+
+                    if (!response.ok) throw new Error("업로드 실패");
+                    console.log(`${file.name} 업로드 완료`);
+                } catch (err) {
+                    console.error("에러 발생:", err);
+                    alert(`${file.name} 업로드에 실패했습니다. 용량이 너무 큰지 확인해주세요.`);
+                }
             }
+
+            // 초기화
+            headerTitle.innerText = "하진이 성장 앨범";
+            fab.disabled = false;
+            fab.classList.remove('opacity-50');
             fileInput.value = "";
             loadPhotosFromServer();
         };

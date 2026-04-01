@@ -105,6 +105,18 @@ let isLoading = false;       // 중복 로딩 방지 플래그
 
 // --- 4. 화면 렌더링 (타임라인 핵심 로직) ---
 function renderTimeline() {
+    // 1. 헤더 UI 초기화 (가장 중요)
+    const backBtn = document.getElementById('back-btn');
+    const headerTitle = document.getElementById('header-title');
+    const timelineLine = document.getElementById('timeline-line');
+
+    if (backBtn) backBtn.classList.add('hidden'); // 뒤로가기 버튼 숨기기
+    if (headerTitle) headerTitle.innerText = "하진이 성장 앨범"; // 제목 복구
+    if (timelineLine) timelineLine.style.display = 'block'; // 타임라인 선 보이기
+
+    // 2. 리스트 초기화 및 데이터 필터링
+    timelineList.innerHTML = '';
+
     // 필터링된 전체 날짜 목록 생성
     const allFilteredDates = Object.keys(photoData)
         .filter(date => currentFilter === 'all' || date.startsWith(currentFilter))

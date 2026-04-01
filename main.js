@@ -75,18 +75,31 @@ function createMonthButtons() {
 }
 
 function filterByMonth(month) {
+    // 1. 전역 상태 업데이트
     currentFilter = month;
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.classList.remove('bg-pink-500', 'text-white');
+    displayedDatesCount = PAGE_SIZE; // 무한 스크롤 초기화 (3일치부터 다시 시작)
+
+    // 2. UI 업데이트: 모든 필터 버튼의 스타일을 초기화 (회색)
+    const allButtons = document.querySelectorAll('.filter-btn');
+    allButtons.forEach(btn => {
+        // 기존 핑크색 클래스 제거 후 회색 클래스 추가
+        btn.classList.remove('bg-pink-500', 'text-white', 'shadow-sm');
         btn.classList.add('bg-gray-100', 'text-gray-600');
     });
 
-    const activeBtn = document.getElementById(`btn-${month === 'all' ? 'all' : month}`);
+    // 3. 선택된 버튼만 핑크색으로 활성화
+    // 'all'인 경우 id는 'btn-all', 그 외엔 'btn-YYYY-MM' 형태
+    const targetId = (month === 'all') ? 'btn-all' : `btn-${month}`;
+    const activeBtn = document.getElementById(targetId);
+
     if (activeBtn) {
         activeBtn.classList.remove('bg-gray-100', 'text-gray-600');
-        activeBtn.classList.add('bg-pink-500', 'text-white');
+        activeBtn.classList.add('bg-pink-500', 'text-white', 'shadow-sm');
     }
-    renderTimeline();
+
+    // 4. 화면 갱신
+    window.scrollTo(0, 0); // 상단으로 이동
+    renderTimeline();      // 필터링된 결과 그리기
 }
 
 // --- 화면 렌더링 상태 관리를 위한 변수 추가 ---
@@ -184,15 +197,6 @@ window.addEventListener('scroll', () => {
         }
     }
 });
-
-// --- 필터 변경 시 화면 렌더링 초기화 ---
-function filterByMonth(month) {
-    currentFilter = month;
-    displayedDatesCount = PAGE_SIZE; // 다시 3일치부터 시작
-    // ... [기존 버튼 스타일 변경 로직 유지] ...
-    renderTimeline();
-    window.scrollTo(0, 0); // 맨 위로 스크롤
-}
 
 // 상세 화면 보기
 function renderDetail(date) {

@@ -281,19 +281,17 @@ fileInput.onchange = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
-    // 현재 서버 파일 목록 다시 확인
+    // 현재 서버 파일 목록 확인 (중복 체크용)
     const existingFiles = new Set();
     Object.values(photoData).flat().forEach(photo => existingFiles.add(photo.name));
 
     const overlay = document.getElementById('upload-overlay');
     const statusTitle = document.getElementById('upload-status-title');
     const statusDetail = document.getElementById('upload-status-detail');
-    const skipDetail = document.getElementById('skip-detail');
     const progressBar = document.getElementById('upload-progress-bar');
 
     overlay.style.display = 'flex';
-    statusTitle.innerText = "🚀 사진 분석 중...";
-    skipDetail.innerText = "";
+    fab.disabled = true;
 
     let uploadCount = 0;
     let skipCount = 0;
@@ -304,16 +302,13 @@ fileInput.onchange = async (e) => {
         const photoDate = await getPhotoDate(file);
         const expectedName = `${photoDate}_${file.name}`;
 
-        // 진행률 업데이트
+        // 진행률 표시
         const percent = ((i + 1) / total) * 100;
         progressBar.style.width = `${percent}%`;
         statusDetail.innerHTML = `${total}개 중 ${i + 1}번째 처리 중...`;
 
-        // [중복 체크 및 표시]
         if (existingFiles.has(expectedName)) {
-            console.log(`중복 제외: ${file.name}`);
             skipCount++;
-            skipDetail.innerText = `현재 중복 제외된 사진: ${skipCount}개`;
             continue;
         }
 
@@ -323,29 +318,40 @@ fileInput.onchange = async (e) => {
         formData.append('password', window.tempPassword);
 
         try {
-            statusTitle.innerText = `📸 업로드 중: ${file.name.substring(0, 10)}...`;
+            statusTitle.innerText = `📸 업로드 중...`;
             const response = await fetch(`${API_BASE}/upload`, {
                 method: 'POST',
                 body: formData
             });
-
             if (response.ok) uploadCount++;
         } catch (err) {
-            console.error("업로드 실패:", err);
+            console.error(err);
         }
     }
 
-    // 최종 결과 보고
+    // --- [수정 포인트] 업로드 완료 후 처리 ---
     statusTitle.innerText = "✅ 작업 완료!";
-    statusDetail.innerHTML = `총 ${uploadCount}개 업로드 완료<br>${skipCount}개 중복 제외됨`;
+    statusDetail.innerHTML = `총 ${uploadCount}개 완료, ${skipCount}개 중복 제외`;
 
     setTimeout(() => {
         overlay.style.display = 'none';
         fab.disabled = false;
         fileInput.value = "";
-        resetFab(); // 버튼 상태 초기화 (인증 해제)
+        resetFab(); // 인증 해제 및 버튼 초기화
+
+        // 1. 상세 페이지에서 메인으로 강제 이동
+        // backBtn이 보이고 있다면(상세 페이지라면) 메인으로 돌아가게 함
+        if (!backBtn.classList.contains('hidden')) {
+            renderTimeline();
+        }
+
+        // 2. 전체 데이터를 새로 불러와서 갱신
         loadPhotosFromServer();
-    }, 2000); // 결과를 확인할 수 있게 2초 뒤에 닫음
+
+        // 3. 페이지 최상단으로 스크롤 이동
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    }, 1500);
 };
 
 function getPhotoDate(file) {

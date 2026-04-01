@@ -1,0 +1,26 @@
+/* style.css */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+.photo-grid { display: grid; gap: 8px; width: 100%; aspect-ratio: 16/9; }
+/* 아이폰에서 사진 길게 눌러 저장 가능하도록 설정 */
+.saveable-image { -webkit-touch-callout: default !important; display: block; }
+video { background: #000; }
+/* 로딩 오버레이 스타일 */
+#upload-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(5px);
+    z-index: 9999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+/* 가로 스크롤바 숨기기 (깔끔한 디자인용) */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+/* 사진 업로드 텍스트가 나타날 때의 애니메이션을 위한 클래스 */
+.fab-active { padding-left: 1.5rem; padding-right: 1.5rem; }
+.fab-active #fab-icon { margin-right: 0.5rem; font-size: 1.5rem; }
+.fab-active #fab-text { max-w-xs opacity: 1; }

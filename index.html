@@ -247,50 +247,66 @@
         }
 
         // --- 5. 업로드, 다운로드 및 기타 로직 (생략 없이 유지) ---
-        fab.onclick = () => fileInput.click();
-        // index.html의 fileInput.onchange 부분 수정
-fileInput.onchange = async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
+        // 업로드 버튼(+) 클릭 시 실행
+        fab.onclick = () => {
+            // 1. 버튼을 누르자마자 비밀번호를 먼저 물어봅니다.
+            const password = prompt("업로드 권한이 필요합니다. 비밀번호를 입력하세요:");
 
-    // [추가] 업로드 시작 전 비밀번호 한 번만 물어보기
-    const password = prompt("업로드 비밀번호를 입력하세요:");
-    if (!password) return; // 취소 누르면 중단
+            if (password === null) return; // 취소를 누른 경우 아무것도 안 함
 
-    const overlay = document.getElementById('upload-overlay');
-    overlay.style.display = 'flex';
-    fab.disabled = true;
+            if (password) {
+                // 2. 입력한 비밀번호를 임시로 보관합니다. (나중에 fetch할 때 쓰기 위함)
+                window.tempPassword = password;
 
-    for (const file of files) {
-        const formData = new FormData();
-        formData.append('photo', file);
-        formData.append('taken_date', await getPhotoDate(file));
+                // 3. 비밀번호가 입력되었다면 그제서야 파일 선택창을 띄웁니다.
+                fileInput.click();
+            } else {
+                alert("비밀번호를 입력해야 합니다.");
+            }
+        };
 
-        // [중요] 사용자가 입력한 비밀번호를 폼 데이터에 추가
-        formData.append('password', password);
+        // 업로드 전송
+        fileInput.onchange = async (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
 
-        try {
-            const response = await fetch(`${API_BASE}/upload`, {
-                method: 'POST',
-                body: formData
-            });
+            const overlay = document.getElementById('upload-overlay');
+            overlay.style.display = 'flex';
+            fab.disabled = true;
 
-            if (response.status === 401) {
-                alert("비밀번호가 틀려 업로드가 거부되었습니다.");
-                break; // 루프 중단
+            // 보관해둔 비밀번호 가져오기
+            const password = window.tempPassword;
+
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append('photo', file);
+                formData.append('taken_date', await getPhotoDate(file));
+
+                // 서버로 비밀번호 전달
+                formData.append('password', password);
+
+                try {
+                    const response = await fetch(`${API_BASE}/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (response.status === 401) {
+                        alert("비밀번호가 틀려 서버에서 거부되었습니다.");
+                        break;
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
             }
 
-            if (!response.ok) throw new Error();
-        } catch (err) {
-            console.error("업로드 중 오류:", err);
-        }
-    }
-
-    overlay.style.display = 'none';
-    fab.disabled = false;
-    fileInput.value = "";
-    loadPhotosFromServer();
-};
+            // 작업 완료 후 초기화
+            overlay.style.display = 'none';
+            fab.disabled = false;
+            fileInput.value = "";
+            window.tempPassword = null; // 보안을 위해 임시 비밀번호 삭제
+            loadPhotosFromServer();
+        };
 
         function getPhotoDate(file) {
             return new Promise((resolve) => {

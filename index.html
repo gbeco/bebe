@@ -249,48 +249,48 @@
         // --- 5. 업로드, 다운로드 및 기타 로직 (생략 없이 유지) ---
         fab.onclick = () => fileInput.click();
         // index.html의 fileInput.onchange 부분 수정
-        fileInput.onchange = async (e) => {
-            const files = Array.from(e.target.files);
-            if (files.length === 0) return;
+fileInput.onchange = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
 
-            // [추가] 업로드 시작 전 비밀번호 한 번만 물어보기
-            const password = prompt("업로드 비밀번호를 입력하세요:");
-            if (!password) return; // 취소 누르면 중단
+    // [추가] 업로드 시작 전 비밀번호 한 번만 물어보기
+    const password = prompt("업로드 비밀번호를 입력하세요:");
+    if (!password) return; // 취소 누르면 중단
 
-            const overlay = document.getElementById('upload-overlay');
-            overlay.style.display = 'flex';
-            fab.disabled = true;
+    const overlay = document.getElementById('upload-overlay');
+    overlay.style.display = 'flex';
+    fab.disabled = true;
 
-            for (const file of files) {
-                const formData = new FormData();
-                formData.append('photo', file);
-                formData.append('taken_date', await getPhotoDate(file));
+    for (const file of files) {
+        const formData = new FormData();
+        formData.append('photo', file);
+        formData.append('taken_date', await getPhotoDate(file));
 
-                // [중요] 사용자가 입력한 비밀번호를 폼 데이터에 추가
-                formData.append('password', password);
+        // [중요] 사용자가 입력한 비밀번호를 폼 데이터에 추가
+        formData.append('password', password);
 
-                try {
-                    const response = await fetch(`${API_BASE}/upload`, {
-                        method: 'POST',
-                        body: formData
-                    });
+        try {
+            const response = await fetch(`${API_BASE}/upload`, {
+                method: 'POST',
+                body: formData
+            });
 
-                    if (response.status === 401) {
-                        alert("비밀번호가 틀려 업로드가 거부되었습니다.");
-                        break; // 루프 중단
-                    }
-
-                    if (!response.ok) throw new Error();
-                } catch (err) {
-                    console.error("업로드 중 오류:", err);
-                }
+            if (response.status === 401) {
+                alert("비밀번호가 틀려 업로드가 거부되었습니다.");
+                break; // 루프 중단
             }
 
-            overlay.style.display = 'none';
-            fab.disabled = false;
-            fileInput.value = "";
-            loadPhotosFromServer();
-        };
+            if (!response.ok) throw new Error();
+        } catch (err) {
+            console.error("업로드 중 오류:", err);
+        }
+    }
+
+    overlay.style.display = 'none';
+    fab.disabled = false;
+    fileInput.value = "";
+    loadPhotosFromServer();
+};
 
         function getPhotoDate(file) {
             return new Promise((resolve) => {

@@ -24,3 +24,8 @@ video { background: #000; }
 .fab-active { padding-left: 1.5rem; padding-right: 1.5rem; }
 .fab-active #fab-icon { margin-right: 0.5rem; font-size: 1.5rem; }
 .fab-active #fab-text { max-w-xs opacity: 1; }
+.filter-btn {
+    -webkit-tap-highlight-color: transparent; /* 아이폰 터치 시 생기는 파란/회색 음영 제거 */
+    outline: none;
+    -webkit-appearance: none; /* 사파리 기본 버튼 스타일 제거 */
+}

@@ -75,31 +75,27 @@ function createMonthButtons() {
 }
 
 function filterByMonth(month) {
-    // 1. 전역 상태 업데이트
     currentFilter = month;
-    displayedDatesCount = PAGE_SIZE; // 무한 스크롤 초기화 (3일치부터 다시 시작)
+    displayedDatesCount = PAGE_SIZE;
 
-    // 2. UI 업데이트: 모든 필터 버튼의 스타일을 초기화 (회색)
+    // 1. 모든 필터 버튼을 찾아서 스타일 초기화
     const allButtons = document.querySelectorAll('.filter-btn');
     allButtons.forEach(btn => {
-        // 기존 핑크색 클래스 제거 후 회색 클래스 추가
-        btn.classList.remove('bg-pink-500', 'text-white', 'shadow-sm');
-        btn.classList.add('bg-gray-100', 'text-gray-600');
+        // 사파리에서 가장 확실하게 클래스를 초기화하는 방법
+        btn.className = "filter-btn inline-block px-4 py-2 rounded-full text-sm font-bold bg-gray-100 text-gray-600 transition-all";
     });
 
-    // 3. 선택된 버튼만 핑크색으로 활성화
-    // 'all'인 경우 id는 'btn-all', 그 외엔 'btn-YYYY-MM' 형태
+    // 2. 선택된 버튼의 ID를 정확히 타겟팅
     const targetId = (month === 'all') ? 'btn-all' : `btn-${month}`;
     const activeBtn = document.getElementById(targetId);
 
     if (activeBtn) {
-        activeBtn.classList.remove('bg-gray-100', 'text-gray-600');
-        activeBtn.classList.add('bg-pink-500', 'text-white', 'shadow-sm');
+        // 활성화 스타일을 강제로 주입 (!important 효과를 위해 className 변경)
+        activeBtn.className = "filter-btn inline-block px-4 py-2 rounded-full text-sm font-bold bg-pink-500 text-white shadow-sm transition-all";
     }
 
-    // 4. 화면 갱신
-    window.scrollTo(0, 0); // 상단으로 이동
-    renderTimeline();      // 필터링된 결과 그리기
+    window.scrollTo(0, 0);
+    renderTimeline();
 }
 
 // --- 화면 렌더링 상태 관리를 위한 변수 추가 ---
@@ -241,7 +237,7 @@ fab.onclick = async () => {
     }
 
     // [상태 1] 인증 전인 경우 -> 비밀번호 확인
-    const password = prompt("사진 업로드는 엄빠만 가능해요! 비밀번호를 입력하세요:");
+    const password = prompt("사진 업로드는 엄빠만 가능해요! 비밀번호를 입력하세요.");
     if (!password) return;
 
     try {

@@ -37,8 +37,14 @@
 <body class="bg-gray-50 font-sans mb-24">
     <div id="upload-overlay">
         <div class="text-6xl animate-bounce mb-4">🚀</div>
-        <h2 class="text-xl font-bold text-gray-800">하진이 사진 업로드 중...</h2>
-        <p class="text-sm text-gray-500 mt-2">잠시만 기다려주세요!</p>
+        <h2 id="upload-status-title" class="text-xl font-bold text-gray-800">업로드 준비 중...</h2>
+        <div class="mt-4 bg-gray-100 rounded-full w-64 h-2 overflow-hidden">
+            <div id="upload-progress-bar" class="bg-pink-500 h-full w-0 transition-all"></div>
+        </div>
+        <p id="upload-status-detail" class="text-sm text-gray-500 mt-4 text-center px-6">
+            전체 0개 중 0개 처리 중...<br>
+            <span id="skip-detail" class="text-orange-500 font-bold"></span>
+        </p>
     </div>
 
     <header class="bg-white/80 backdrop-blur-md p-6 shadow-sm sticky top-0 z-30 flex items-center justify-between">
@@ -307,42 +313,71 @@
             const files = Array.from(e.target.files);
             if (files.length === 0) return;
 
+            // 현재 서버 파일 목록 다시 확인
+            const existingFiles = new Set();
+            Object.values(photoData).flat().forEach(photo => existingFiles.add(photo.name));
+
             const overlay = document.getElementById('upload-overlay');
+            const statusTitle = document.getElementById('upload-status-title');
+            const statusDetail = document.getElementById('upload-status-detail');
+            const skipDetail = document.getElementById('skip-detail');
+            const progressBar = document.getElementById('upload-progress-bar');
+
             overlay.style.display = 'flex';
-            fab.disabled = true;
+            statusTitle.innerText = "🚀 사진 분석 중...";
+            skipDetail.innerText = "";
 
-            // 보관해둔 비밀번호 가져오기
-            const password = window.tempPassword;
+            let uploadCount = 0;
+            let skipCount = 0;
+            const total = files.length;
 
-            for (const file of files) {
+            for (let i = 0; i < total; i++) {
+                const file = files[i];
+                const photoDate = await getPhotoDate(file);
+                const expectedName = `${photoDate}_${file.name}`;
+
+                // 진행률 업데이트
+                const percent = ((i + 1) / total) * 100;
+                progressBar.style.width = `${percent}%`;
+                statusDetail.innerHTML = `${total}개 중 ${i + 1}번째 처리 중...`;
+
+                // [중복 체크 및 표시]
+                if (existingFiles.has(expectedName)) {
+                    console.log(`중복 제외: ${file.name}`);
+                    skipCount++;
+                    skipDetail.innerText = `현재 중복 제외된 사진: ${skipCount}개`;
+                    continue;
+                }
+
                 const formData = new FormData();
                 formData.append('photo', file);
-                formData.append('taken_date', await getPhotoDate(file));
-
-                // 서버로 비밀번호 전달
-                formData.append('password', password);
+                formData.append('taken_date', photoDate);
+                formData.append('password', window.tempPassword);
 
                 try {
+                    statusTitle.innerText = `📸 업로드 중: ${file.name.substring(0, 10)}...`;
                     const response = await fetch(`${API_BASE}/upload`, {
                         method: 'POST',
                         body: formData
                     });
 
-                    if (response.status === 401) {
-                        alert("비밀번호가 틀려 서버에서 거부되었습니다.");
-                        break;
-                    }
+                    if (response.ok) uploadCount++;
                 } catch (err) {
-                    console.error(err);
+                    console.error("업로드 실패:", err);
                 }
             }
 
-            // 작업 완료 후 초기화
-            overlay.style.display = 'none';
-            fab.disabled = false;
-            fileInput.value = "";
-            window.tempPassword = null; // 보안을 위해 임시 비밀번호 삭제
-            loadPhotosFromServer();
+            // 최종 결과 보고
+            statusTitle.innerText = "✅ 작업 완료!";
+            statusDetail.innerHTML = `총 ${uploadCount}개 업로드 완료<br>${skipCount}개 중복 제외됨`;
+
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                fab.disabled = false;
+                fileInput.value = "";
+                resetFab(); // 버튼 상태 초기화 (인증 해제)
+                loadPhotosFromServer();
+            }, 2000); // 결과를 확인할 수 있게 2초 뒤에 닫음
         };
 
         function getPhotoDate(file) {

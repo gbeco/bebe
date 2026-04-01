@@ -28,6 +28,10 @@
         /* 가로 스크롤바 숨기기 (깔끔한 디자인용) */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* 사진 업로드 텍스트가 나타날 때의 애니메이션을 위한 클래스 */
+        .fab-active { padding-left: 1.5rem; padding-right: 1.5rem; }
+        .fab-active #fab-icon { margin-right: 0.5rem; font-size: 1.5rem; }
+        .fab-active #fab-text { max-w-xs opacity: 1; }
     </style>
 </head>
 <body class="bg-gray-50 font-sans mb-24">
@@ -61,8 +65,9 @@
 
     <input type="file" id="file-input" accept="image/*, video/*" class="hidden" multiple>
 
-    <button id="fab" class="fixed bottom-8 right-8 w-16 h-16 bg-pink-500 text-white rounded-full shadow-2xl text-4xl flex items-center justify-center active:scale-90 hover:bg-pink-600 transition-all z-40">
-        +
+    <button id="fab" class="fixed bottom-8 right-8 px-6 h-16 bg-pink-500 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-all z-40 font-bold">
+        <span id="fab-icon" class="text-3xl mr-0 transition-all">+</span>
+        <span id="fab-text" class="max-w-0 overflow-hidden whitespace-nowrap transition-all duration-300 opacity-0">업로드</span>
     </button>
 
     <script>
@@ -248,12 +253,20 @@
 
         // --- 5. 업로드, 다운로드 및 기타 로직 (생략 없이 유지) ---
         // 업로드 버튼(+) 클릭 시 실행
+        let isAuthorized = false; // 인증 여부 상태 관리
+
         fab.onclick = async () => {
-            const password = prompt("엄빠만 업로드할 수 있어요. 비밀번호를 입력하세요:");
+            // [상태 2] 이미 인증된 경우 -> 바로 갤러리 열기 (사파리 허용)
+            if (isAuthorized) {
+                fileInput.click();
+                return;
+            }
+
+            // [상태 1] 인증 전인 경우 -> 비밀번호 확인
+            const password = prompt("업로드 권한이 필요합니다. 비밀번호를 입력하세요:");
             if (!password) return;
 
             try {
-                // 서버에 비밀번호가 맞는지 먼저 물어봅니다.
                 const response = await fetch(`${API_BASE}/check-pw`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -261,17 +274,33 @@
                 });
 
                 if (response.ok) {
-                    // 정답일 때만 비밀번호를 저장하고 갤러리를 엽니다.
+                    // 인증 성공 처리
+                    isAuthorized = true;
                     window.tempPassword = password;
-                    fileInput.click();
+
+                    // 버튼 모양 변경 (업로드 메뉴로 변신)
+                    const fab = document.getElementById('fab');
+                    fab.classList.add('fab-active');
+                    document.getElementById('fab-icon').innerText = "📸"; // 아이콘 변경
+
+                    alert("인증되었습니다! 이제 버튼을 한 번 더 눌러 사진을 골라주세요.");
                 } else {
-                    alert("비밀번호가 틀렸습니다. 다시 확인해주세요. 🙅‍♂️");
+                    alert("비밀번호가 틀렸습니다. 🙅‍♂️");
                 }
             } catch (err) {
-                console.error("서버 연결 에러:", err);
-                alert("서버와 연결할 수 없습니다.");
+                alert("서버 연결 실패");
             }
         };
+
+        // 파일 업로드 완료 후 버튼 상태 초기화 (필요시)
+        // loadPhotosFromServer 마지막에 추가하면 보안상 더 좋습니다.
+        function resetFab() {
+            isAuthorized = false;
+            window.tempPassword = null;
+            const fab = document.getElementById('fab');
+            fab.classList.remove('fab-active');
+            document.getElementById('fab-icon').innerText = "+";
+        }
 
         // 업로드 전송
         fileInput.onchange = async (e) => {

@@ -89,30 +89,44 @@ function filterByMonth(month) {
     renderTimeline();
 }
 
+// --- 화면 렌더링 상태 관리를 위한 변수 추가 ---
+let displayedDatesCount = 3; // 처음에 보여줄 날짜 수
+const PAGE_SIZE = 3;         // 스크롤 할 때마다 추가할 날짜 수
+let isLoading = false;       // 중복 로딩 방지 플래그
+
 // --- 4. 화면 렌더링 (타임라인 핵심 로직) ---
 function renderTimeline() {
-    timelineList.innerHTML = '';
-    const line = document.getElementById('timeline-line');
-    if(line) line.style.display = 'block';
-    backBtn.classList.add('hidden');
-    headerTitle.innerText = "하진이 성장 앨범";
-
-    // 필터링 적용
-    const sortedDates = Object.keys(photoData)
+    // 필터링된 전체 날짜 목록 생성
+    const allFilteredDates = Object.keys(photoData)
         .filter(date => currentFilter === 'all' || date.startsWith(currentFilter))
         .sort().reverse();
 
-    if (sortedDates.length === 0) {
+    if (allFilteredDates.length === 0) {
         timelineList.innerHTML = `<div class="text-center py-20 text-gray-400">기록이 없습니다.</div>`;
         return;
     }
 
-    sortedDates.forEach(date => {
+    // 처음 실행하거나 필터가 바뀌었을 때만 리스트 초기화
+    if (displayedDatesCount === PAGE_SIZE || timelineList.innerHTML.includes("사진 불러오는 중...")) {
+        timelineList.innerHTML = '';
+    }
+
+    // 현재 페이지(최근 N일치)만큼만 잘라서 가져오기
+    const datesToDisplay = allFilteredDates.slice(0, displayedDatesCount);
+
+    // 기존 리스트와 비교하여 새로 추가된 날짜만 렌더링 (성능 최적화)
+    const currentRenderedDates = Array.from(timelineList.querySelectorAll('section')).map(s => s.dataset.date);
+
+    datesToDisplay.forEach(date => {
+        if (currentRenderedDates.includes(date)) return; // 이미 그려진 날짜는 패스
+
         const photos = photoData[date];
         const section = document.createElement('section');
-        section.className = "flex space-x-4 cursor-pointer animate-fade-in";
+        section.dataset.date = date; // 날짜 식별용
+        section.className = "flex space-x-4 cursor-pointer animate-fade-in mb-10";
         section.onclick = () => renderDetail(date);
 
+        // ... [기존 getMediaTag 및 photoMarkup 생성 로직 유지] ...
         const getMediaTag = (photo, isSmall = false) => {
             const isVideo = photo.src.toLowerCase().endsWith('.mp4') || photo.src.toLowerCase().endsWith('.mov');
             return isVideo
@@ -145,6 +159,39 @@ function renderTimeline() {
         `;
         timelineList.appendChild(section);
     });
+
+    isLoading = false; // 로딩 완료
+}
+
+// --- 화면 렌더링 무한 스크롤 이벤트 리스너 추가 ---
+window.addEventListener('scroll', () => {
+    // 상세 화면이 아닐 때만 작동
+    if (!backBtn.classList.contains('hidden')) return;
+
+    // 스크롤이 바닥 근처(100px 남았을 때)에 도달했는지 확인
+    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) {
+        if (!isLoading) {
+            const allFilteredDates = Object.keys(photoData)
+                .filter(date => currentFilter === 'all' || date.startsWith(currentFilter));
+
+            // 아직 더 보여줄 날짜가 남아있다면
+            if (displayedDatesCount < allFilteredDates.length) {
+                isLoading = true;
+                displayedDatesCount += PAGE_SIZE; // 3일치 추가
+                renderTimeline();
+                console.log(`${displayedDatesCount}일치까지 로딩됨`);
+            }
+        }
+    }
+});
+
+// --- 필터 변경 시 화면 렌더링 초기화 ---
+function filterByMonth(month) {
+    currentFilter = month;
+    displayedDatesCount = PAGE_SIZE; // 다시 3일치부터 시작
+    // ... [기존 버튼 스타일 변경 로직 유지] ...
+    renderTimeline();
+    window.scrollTo(0, 0); // 맨 위로 스크롤
 }
 
 // 상세 화면 보기

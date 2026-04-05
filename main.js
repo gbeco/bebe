@@ -150,9 +150,20 @@ function renderTimeline() {
         // ... [기존 getMediaTag 및 photoMarkup 생성 로직 유지] ...
         const getMediaTag = (photo, isSmall = false) => {
             const isVideo = photo.src.toLowerCase().endsWith('.mp4') || photo.src.toLowerCase().endsWith('.mov');
-            return isVideo
-                ? `<div class="relative w-full h-full bg-black"><video src="${photo.src}" preload="metadata" playsinline muted class="w-full h-full object-cover"></video><div class="absolute inset-0 bg-black/20 flex items-center justify-center text-white ${isSmall ? 'text-xs' : 'text-xl'}">▶️</div></div>`
-                : `<img src="${photo.src}" class="w-full h-full object-cover">`;
+
+            if (isVideo) {
+                return isVideo
+                    ? `<div class="relative w-full h-full bg-black"><video src="${photo.src}" preload="metadata" playsinline muted class="w-full h-full object-cover"></video><div class="absolute inset-0 bg-black/20 flex items-center justify-center text-white ${isSmall ? 'text-xs' : 'text-xl'}">▶️</div></div>`
+                    : `<img src="${photo.src}" class="w-full h-full object-cover">`;
+            } else {
+                // 원본 주소에서 파일명만 추출하여 썸네일 주소로 변경
+                const filename = photo.name;
+                const thumbSrc = `${API_BASE}/thumbs/${filename}`;
+
+                // 목록(Timeline)에서는 thumbSrc를 사용하고,
+                // 클릭해서 들어가는 상세 페이지(renderDetail)에서만 원본 photo.src를 사용하게 됩니다.
+                return `<img src="${thumbSrc}" class="w-full h-full object-cover" loading="lazy">`;
+            }
         };
 
         let photoMarkup = photos.length === 1

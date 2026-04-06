@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="apple-touch-icon" href="icon-1024.png">
+    <title>하진이 슬라이드쇼 👶</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: black; overflow: hidden; }
+        .slide {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .slide.active { opacity: 1; }
+        img, video {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+        #info-overlay {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            font-family: sans-serif;
+            z-index: 100;
+            background: rgba(0,0,0,0.3);
+            padding: 10px 20px;
+            border-radius: 30px;
+            backdrop-filter: blur(5px);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="slide-container"></div>
+    <div id="info-overlay">하진이의 기록 불러오는 중...</div>
+
+    <script>
+        const API_BASE = "https://wallpapers-locate-prepare-railway.trycloudflare.com"; // 본인의 API 주소로 수정
+        let photos = [];
+        let currentIndex = 0;
+        const SLIDE_DURATION = 5000; // 5초마다 교체
+
+        async function fetchPhotos() {
+            try {
+                const response = await fetch(`${API_BASE}/photos`, { cache: "no-store" });
+                const filenames = await response.json();
+
+                // 랜덤 섞기 (Shuffle)
+                photos = filenames
+                    .filter(name => !name.toLowerCase().endsWith('.mp4') && !name.toLowerCase().endsWith('.mov')) // 이미지만 필터 (영상 제외 시)
+                    .sort(() => Math.random() - 0.5);
+
+                if (photos.length > 0) {
+                    startSlideshow();
+                }
+            } catch (err) {
+                document.getElementById('info-overlay').innerText = "데이터를 불러올 수 없습니다.";
+            }
+        }
+
+        function createSlide(filename) {
+            const div = document.createElement('div');
+            div.className = 'slide';
+
+            const img = document.createElement('img');
+            img.src = `${API_BASE}/data/${filename}`; // 슬라이드쇼는 고화질 원본 사용
+
+            // 날짜 추출 (YYYY-MM-DD)
+            const dateStr = `${filename.substring(0, 4)}-${filename.substring(4, 6)}-${filename.substring(6, 8)}`;
+
+            div.appendChild(img);
+            return { element: div, date: dateStr };
+        }
+
+        async function startSlideshow() {
+            const container = document.getElementById('slide-container');
+            const info = document.getElementById('info-overlay');
+
+            function showNext() {
+                const filename = photos[currentIndex];
+                const { element, date } = createSlide(filename);
+
+                container.appendChild(element);
+
+                // 페이드 인 효과를 위해 잠시 후 active 클래스 추가
+                setTimeout(() => {
+                    element.classList.add('active');
+                    info.innerText = date;
+                }, 50);
+
+                // 이전 슬라이드 제거 (메모리 관리)
+                if (container.children.length > 2) {
+                    container.removeChild(container.firstChild);
+                }
+
+                currentIndex = (currentIndex + 1) % photos.length;
+
+                // 모든 사진을 한 바퀴 다 돌면 리스트 새로고침 (새 사진 반영)
+                if (currentIndex === 0) {
+                    fetchPhotos();
+                }
+            }
+
+            showNext();
+            setInterval(showNext, SLIDE_DURATION);
+        }
+
+        // 전체 화면 모드 (아이패드에서 클릭 시 작동)
+        document.body.onclick = () => {
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen();
+            }
+        };
+
+        fetchPhotos();
+    </script>
+</body>
+</html>

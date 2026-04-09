@@ -19,7 +19,7 @@ function init() {
 function updateDDay() {
     const today = new Date();
     const diffTime = today.getTime() - BIRTH_DATE.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 2;
     document.getElementById('d-day-display').innerText = `태어난 지 +${diffDays}일`;
 }
 

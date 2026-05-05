@@ -250,7 +250,7 @@ function renderDetail(date) {
 
 // --- 5. 업로드, 다운로드 및 기타 로직 (생략 없이 유지) ---
 // 업로드 버튼(+) 클릭 시 실행
-let isAuthorized = false; // 인증 여부 상태 관리
+let isAuthorized = true; // 인증 여부 상태 관리
 
 fab.onclick = async () => {
     // [상태 2] 이미 인증된 경우 -> 바로 갤러리 열기 (사파리 허용)

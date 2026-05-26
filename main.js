@@ -292,7 +292,7 @@ fab.onclick = async () => {
 // 파일 업로드 완료 후 버튼 상태 초기화 (필요시)
 // loadPhotosFromServer 마지막에 추가하면 보안상 더 좋습니다.
 function resetFab() {
-    isAuthorized = false;
+    isAuthorized = true;
     window.tempPassword = null;
     const fab = document.getElementById('fab');
     fab.classList.remove('fab-active');
@@ -338,7 +338,7 @@ fileInput.onchange = async (e) => {
         const formData = new FormData();
         formData.append('photo', file);
         formData.append('taken_date', photoDate);
-        formData.append('password', window.tempPassword);
+        //formData.append('password', window.tempPassword);
 
         try {
             statusTitle.innerText = `📸 업로드 중...`;

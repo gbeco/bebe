@@ -1,6 +1,6 @@
 // --- 1. 설정 및 변수 ---
 const BIRTH_DATE = new Date("2026-01-16");
-const API_BASE = "https://played-start-postal-twist.trycloudflare.com";
+const API_BASE = " https://mistress-massive-lit-hostels.trycloudflare.com";
 let photoData = {};
 let currentFilter = 'all'; // 현재 선택된 월 필터
 

@@ -19,6 +19,16 @@ const WORKER_BASE =
 
 
 // -----------------------------------------------------
+// State
+// -----------------------------------------------------
+
+let mediaItems = [];
+
+let currentViewerIndex =
+  0;
+
+
+// -----------------------------------------------------
 // DOM
 // -----------------------------------------------------
 
@@ -43,6 +53,54 @@ const pageButtons =
 const adminButton =
   document.getElementById(
     "adminButton"
+  );
+
+
+const mediaViewer =
+  document.getElementById(
+    "mediaViewer"
+  );
+
+
+const viewerContent =
+  document.getElementById(
+    "viewerContent"
+  );
+
+
+const viewerClose =
+  document.getElementById(
+    "viewerClose"
+  );
+
+
+const viewerPrev =
+  document.getElementById(
+    "viewerPrev"
+  );
+
+
+const viewerNext =
+  document.getElementById(
+    "viewerNext"
+  );
+
+
+const viewerCounter =
+  document.getElementById(
+    "viewerCounter"
+  );
+
+
+const viewerDate =
+  document.getElementById(
+    "viewerDate"
+  );
+
+
+const viewerName =
+  document.getElementById(
+    "viewerName"
   );
 
 
@@ -225,11 +283,368 @@ function formatTakenDate(
 
 
 // -----------------------------------------------------
-// 사진 카드
+// Media URL
+// -----------------------------------------------------
+
+function getMediaUrl(
+  data
+) {
+
+  return (
+    WORKER_BASE +
+    "/media/" +
+    encodeURIComponent(
+      data.driveFileId
+    )
+  );
+
+}
+
+
+// -----------------------------------------------------
+// Viewer
+// -----------------------------------------------------
+
+function renderViewer() {
+
+  if (
+    mediaItems.length === 0
+  ) {
+
+    return;
+
+  }
+
+
+  const data =
+    mediaItems[
+      currentViewerIndex
+    ];
+
+
+  viewerContent.innerHTML =
+    "";
+
+
+  const mediaUrl =
+    getMediaUrl(
+      data
+    );
+
+
+  // ---------------------------------------------
+  // 영상
+  // ---------------------------------------------
+
+  if (
+    data.mediaType ===
+      "video"
+  ) {
+
+    const video =
+      document.createElement(
+        "video"
+      );
+
+
+    video.src =
+      mediaUrl;
+
+
+    video.controls =
+      true;
+
+
+    video.autoplay =
+      false;
+
+
+    video.playsInline =
+      true;
+
+
+    video.preload =
+      "metadata";
+
+
+    viewerContent.appendChild(
+      video
+    );
+
+  }
+
+
+  // ---------------------------------------------
+  // 사진
+  // ---------------------------------------------
+
+  else {
+
+    const image =
+      document.createElement(
+        "img"
+      );
+
+
+    image.src =
+      mediaUrl;
+
+
+    image.alt =
+      data.name || "";
+
+
+    image.decoding =
+      "async";
+
+
+    viewerContent.appendChild(
+      image
+    );
+
+  }
+
+
+  viewerCounter.textContent =
+    String(
+      currentViewerIndex + 1
+    ) +
+    " / " +
+    String(
+      mediaItems.length
+    );
+
+
+  viewerDate.textContent =
+    formatTakenDate(
+      data
+    );
+
+
+  viewerName.textContent =
+    data.name || "";
+
+
+  // 하나밖에 없으면 화살표 숨김
+
+  const showArrows =
+    mediaItems.length > 1;
+
+
+  viewerPrev.style.display =
+    showArrows
+      ? "block"
+      : "none";
+
+
+  viewerNext.style.display =
+    showArrows
+      ? "block"
+      : "none";
+
+}
+
+
+function openViewer(
+  index
+) {
+
+  currentViewerIndex =
+    index;
+
+
+  renderViewer();
+
+
+  mediaViewer.classList.add(
+    "open"
+  );
+
+
+  mediaViewer.setAttribute(
+    "aria-hidden",
+    "false"
+  );
+
+
+  document.body.style.overflow =
+    "hidden";
+
+}
+
+
+function closeViewer() {
+
+  mediaViewer.classList.remove(
+    "open"
+  );
+
+
+  mediaViewer.setAttribute(
+    "aria-hidden",
+    "true"
+  );
+
+
+  document.body.style.overflow =
+    "";
+
+
+  // 영상이 재생 중일 수 있으므로 제거
+
+  viewerContent.innerHTML =
+    "";
+
+}
+
+
+function showPrevious() {
+
+  if (
+    mediaItems.length === 0
+  ) {
+
+    return;
+
+  }
+
+
+  currentViewerIndex =
+    (
+      currentViewerIndex -
+      1 +
+      mediaItems.length
+    ) %
+    mediaItems.length;
+
+
+  renderViewer();
+
+}
+
+
+function showNext() {
+
+  if (
+    mediaItems.length === 0
+  ) {
+
+    return;
+
+  }
+
+
+  currentViewerIndex =
+    (
+      currentViewerIndex +
+      1
+    ) %
+    mediaItems.length;
+
+
+  renderViewer();
+
+}
+
+
+// -----------------------------------------------------
+// Viewer Events
+// -----------------------------------------------------
+
+viewerClose.addEventListener(
+  "click",
+  closeViewer
+);
+
+
+viewerPrev.addEventListener(
+  "click",
+  showPrevious
+);
+
+
+viewerNext.addEventListener(
+  "click",
+  showNext
+);
+
+
+// 검은 배경 클릭 시 닫기
+
+mediaViewer.addEventListener(
+  "click",
+  (event) => {
+
+    if (
+      event.target ===
+      mediaViewer
+    ) {
+
+      closeViewer();
+
+    }
+
+  }
+);
+
+
+// 키보드
+
+document.addEventListener(
+  "keydown",
+  (event) => {
+
+    if (
+      !mediaViewer.classList.contains(
+        "open"
+      )
+    ) {
+
+      return;
+
+    }
+
+
+    if (
+      event.key ===
+      "Escape"
+    ) {
+
+      closeViewer();
+
+    }
+
+
+    if (
+      event.key ===
+      "ArrowLeft"
+    ) {
+
+      showPrevious();
+
+    }
+
+
+    if (
+      event.key ===
+      "ArrowRight"
+    ) {
+
+      showNext();
+
+    }
+
+  }
+);
+
+
+// -----------------------------------------------------
+// Gallery Card
 // -----------------------------------------------------
 
 function createMediaCard(
-  data
+  data,
+  index
 ) {
 
   const card =
@@ -242,15 +657,28 @@ function createMediaCard(
     "media-card";
 
 
+  card.setAttribute(
+    "role",
+    "button"
+  );
+
+
+  card.setAttribute(
+    "tabindex",
+    "0"
+  );
+
+
   const mediaUrl =
-    WORKER_BASE +
-    "/media/" +
-    encodeURIComponent(
-      data.driveFileId
+    getMediaUrl(
+      data
     );
 
 
+  // ---------------------------------------------
   // 영상
+  // ---------------------------------------------
+
   if (
     data.mediaType ===
       "video"
@@ -278,7 +706,7 @@ function createMediaCard(
       true;
 
 
-    video.controls =
+    video.muted =
       true;
 
 
@@ -289,7 +717,10 @@ function createMediaCard(
   }
 
 
+  // ---------------------------------------------
   // 사진
+  // ---------------------------------------------
+
   else {
 
     const image =
@@ -361,6 +792,45 @@ function createMediaCard(
   );
 
 
+  // ---------------------------------------------
+  // 클릭
+  // ---------------------------------------------
+
+  card.addEventListener(
+    "click",
+    () => {
+
+      openViewer(
+        index
+      );
+
+    }
+  );
+
+
+  // Enter 키로도 열기
+
+  card.addEventListener(
+    "keydown",
+    (event) => {
+
+      if (
+        event.key === "Enter" ||
+        event.key === " "
+      ) {
+
+        event.preventDefault();
+
+        openViewer(
+          index
+        );
+
+      }
+
+    }
+  );
+
+
   return card;
 
 }
@@ -385,7 +855,9 @@ async function loadSettings() {
 
 
     if (!snapshot.exists()) {
+
       return;
+
     }
 
 
@@ -470,17 +942,20 @@ async function loadRecentMedia() {
       (documentSnapshot) => {
 
         items.push({
+
           id:
             documentSnapshot.id,
 
           ...documentSnapshot.data()
+
         });
 
       }
     );
 
 
-    // 촬영일 최신순
+    // 최신 촬영순
+
     items.sort(
       (a, b) =>
         getTakenMillis(b) -
@@ -488,8 +963,9 @@ async function loadRecentMedia() {
     );
 
 
-    // 메인 화면에서는 최근 12개
-    const recentItems =
+    // 현재 메인에서는 최근 12개
+
+    mediaItems =
       items.slice(
         0,
         12
@@ -501,7 +977,7 @@ async function loadRecentMedia() {
 
 
     if (
-      recentItems.length === 0
+      mediaItems.length === 0
     ) {
 
       gallery.innerHTML =
@@ -512,18 +988,18 @@ async function loadRecentMedia() {
     }
 
 
-    recentItems.forEach(
-      (item) => {
+    mediaItems.forEach(
+      (item, index) => {
 
         gallery.appendChild(
           createMediaCard(
-            item
+            item,
+            index
           )
         );
 
       }
     );
-
 
   }
 
@@ -544,14 +1020,17 @@ async function loadRecentMedia() {
 
 
 // -----------------------------------------------------
-// 시작
+// Start
 // -----------------------------------------------------
 
 async function initialize() {
 
   await Promise.all([
+
     loadSettings(),
+
     loadRecentMedia()
+
   ]);
 
 }

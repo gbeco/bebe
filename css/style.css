@@ -454,3 +454,67 @@ body {
   }
 
 }
+
+/* ----------------------------------
+   실제 Gallery
+----------------------------------- */
+
+.media-card {
+  position: relative;
+
+  overflow: hidden;
+
+  aspect-ratio: 1 / 1;
+
+  background: #ececec;
+
+  cursor: pointer;
+}
+
+
+.gallery-media {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: cover;
+}
+
+
+.media-info {
+  position: absolute;
+
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  padding:
+    25px 8px 7px;
+
+  background:
+    linear-gradient(
+      transparent,
+      rgba(0,0,0,0.55)
+    );
+
+  color: white;
+}
+
+
+.media-date {
+  font-size: 11px;
+}
+
+
+.gallery-loading {
+  grid-column:
+    1 / -1;
+
+  padding:
+    60px 20px;
+
+  text-align: center;
+
+  color: #888;
+}

@@ -373,7 +373,80 @@
 
   </nav>
 
-
+  <!-- -----------------------------------------
+     Media Viewer
+  ------------------------------------------ -->
+  
+  <div
+    id="mediaViewer"
+    class="media-viewer"
+    aria-hidden="true"
+  >
+  
+    <button
+      id="viewerClose"
+      class="viewer-close"
+      type="button"
+      aria-label="닫기"
+    >
+      ✕
+    </button>
+  
+  
+    <div
+      id="viewerCounter"
+      class="viewer-counter"
+    >
+    </div>
+  
+  
+    <button
+      id="viewerPrev"
+      class="viewer-arrow viewer-prev"
+      type="button"
+      aria-label="이전 사진"
+    >
+      ‹
+    </button>
+  
+  
+    <div
+      id="viewerContent"
+      class="viewer-content"
+    >
+    </div>
+  
+  
+    <button
+      id="viewerNext"
+      class="viewer-arrow viewer-next"
+      type="button"
+      aria-label="다음 사진"
+    >
+      ›
+    </button>
+  
+  
+    <div
+      class="viewer-info"
+    >
+  
+      <div
+        id="viewerDate"
+        class="viewer-date"
+      >
+      </div>
+  
+      <div
+        id="viewerName"
+        class="viewer-name"
+      >
+      </div>
+  
+    </div>
+  
+  </div>
+  
   <script
     type="module"
     src="./js/app.js"

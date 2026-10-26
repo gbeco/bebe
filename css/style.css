@@ -518,3 +518,232 @@ body {
 
   color: #888;
 }
+
+
+/* ----------------------------------
+   Media Viewer
+----------------------------------- */
+
+.media-viewer {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 1000;
+
+  display: none;
+
+  align-items: center;
+
+  justify-content: center;
+
+  background:
+    rgba(0, 0, 0, 0.94);
+
+  color: white;
+}
+
+
+.media-viewer.open {
+  display: flex;
+}
+
+
+.viewer-content {
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding:
+    70px 65px 100px;
+}
+
+
+.viewer-content img,
+.viewer-content video {
+  display: block;
+
+  max-width: 100%;
+  max-height: 100%;
+
+  object-fit: contain;
+}
+
+
+.viewer-content video {
+  width: auto;
+  height: auto;
+}
+
+
+.viewer-close {
+  position: absolute;
+
+  top: 18px;
+  left: 18px;
+
+  z-index: 1010;
+
+  width: 44px;
+  height: 44px;
+
+  border: 0;
+  border-radius: 50%;
+
+  background:
+    rgba(255,255,255,0.12);
+
+  color: white;
+
+  font-size: 20px;
+
+  cursor: pointer;
+}
+
+
+.viewer-counter {
+  position: absolute;
+
+  top: 28px;
+  left: 50%;
+
+  transform:
+    translateX(-50%);
+
+  font-size: 14px;
+
+  color:
+    rgba(255,255,255,0.8);
+}
+
+
+.viewer-arrow {
+  position: absolute;
+
+  top: 50%;
+
+  z-index: 1010;
+
+  transform:
+    translateY(-50%);
+
+  width: 48px;
+  height: 60px;
+
+  border: 0;
+
+  background:
+    rgba(0,0,0,0.25);
+
+  color: white;
+
+  font-size: 45px;
+
+  cursor: pointer;
+}
+
+
+.viewer-prev {
+  left: 5px;
+}
+
+
+.viewer-next {
+  right: 5px;
+}
+
+
+.viewer-info {
+  position: absolute;
+
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  min-height: 80px;
+
+  padding:
+    18px 24px 22px;
+
+  text-align: center;
+
+  background:
+    linear-gradient(
+      transparent,
+      rgba(0,0,0,0.75)
+    );
+}
+
+
+.viewer-date {
+  font-size: 14px;
+
+  font-weight: 600;
+}
+
+
+.viewer-name {
+  margin-top: 4px;
+
+  font-size: 12px;
+
+  color:
+    rgba(255,255,255,0.65);
+
+  overflow: hidden;
+
+  white-space: nowrap;
+
+  text-overflow: ellipsis;
+}
+
+
+/* 갤러리 사진 클릭 가능 표시 */
+
+.media-card {
+  cursor: pointer;
+}
+
+
+@media (
+  max-width: 600px
+) {
+
+  .viewer-content {
+    padding:
+      60px 0 95px;
+  }
+
+
+  .viewer-arrow {
+    width: 42px;
+    height: 54px;
+
+    font-size: 38px;
+
+    background:
+      rgba(0,0,0,0.16);
+  }
+
+
+  .viewer-close {
+    top: 12px;
+    left: 12px;
+  }
+
+
+  .viewer-counter {
+    top: 22px;
+  }
+
+
+  .viewer-info {
+    padding:
+      20px 15px;
+  }
+
+}

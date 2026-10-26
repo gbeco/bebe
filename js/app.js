@@ -637,6 +637,109 @@ document.addEventListener(
   }
 );
 
+// -----------------------------------------------------
+// Mobile Swipe
+// -----------------------------------------------------
+
+let touchStartX = 0;
+let touchStartY = 0;
+
+
+mediaViewer.addEventListener(
+  "touchstart",
+  (event) => {
+
+    if (
+      event.touches.length !== 1
+    ) {
+      return;
+    }
+
+
+    touchStartX =
+      event.touches[0].clientX;
+
+
+    touchStartY =
+      event.touches[0].clientY;
+
+  },
+  {
+    passive: true
+  }
+);
+
+
+mediaViewer.addEventListener(
+  "touchend",
+  (event) => {
+
+    if (
+      event.changedTouches.length !== 1
+    ) {
+      return;
+    }
+
+
+    const touchEndX =
+      event.changedTouches[0].clientX;
+
+
+    const touchEndY =
+      event.changedTouches[0].clientY;
+
+
+    const diffX =
+      touchEndX -
+      touchStartX;
+
+
+    const diffY =
+      touchEndY -
+      touchStartY;
+
+
+    // 세로 스크롤보다
+    // 가로 움직임이 큰 경우만 처리
+    if (
+      Math.abs(diffX) <=
+      Math.abs(diffY)
+    ) {
+      return;
+    }
+
+
+    // 최소 50px 이상 움직여야 스와이프로 판단
+    if (
+      Math.abs(diffX) < 50
+    ) {
+      return;
+    }
+
+
+    // 왼쪽으로 밀기 → 다음
+    if (
+      diffX < 0
+    ) {
+
+      showNext();
+
+    }
+
+
+    // 오른쪽으로 밀기 → 이전
+    else {
+
+      showPrevious();
+
+    }
+
+  },
+  {
+    passive: true
+  }
+);
+
 
 // -----------------------------------------------------
 // Gallery Card

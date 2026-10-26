@@ -1,1 +1,456 @@
 
+* {
+  box-sizing: border-box;
+}
+
+
+:root {
+  --background: #fafafa;
+  --surface: #ffffff;
+  --text: #252525;
+  --subtext: #888;
+  --border: #eeeeee;
+}
+
+
+html {
+  scroll-behavior: smooth;
+}
+
+
+body {
+  margin: 0;
+  padding: 0 0 90px;
+
+  background:
+    var(--background);
+
+  color:
+    var(--text);
+
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "Noto Sans KR",
+    sans-serif;
+}
+
+
+/* ----------------------------------
+   Header
+----------------------------------- */
+
+.header {
+  position: sticky;
+
+  top: 0;
+
+  z-index: 100;
+
+  background:
+    rgba(255, 255, 255, 0.94);
+
+  border-bottom:
+    1px solid var(--border);
+
+  backdrop-filter:
+    blur(15px);
+}
+
+
+.header-inner {
+  max-width: 1050px;
+
+  margin: 0 auto;
+
+  padding: 17px 18px;
+
+  display: flex;
+
+  justify-content:
+    space-between;
+
+  align-items: center;
+}
+
+
+.site-title {
+  margin: 0;
+
+  font-size: 23px;
+
+  letter-spacing:
+    -0.6px;
+}
+
+
+.site-subtitle {
+  margin:
+    4px 0 0;
+
+  font-size: 13px;
+
+  color:
+    var(--subtext);
+}
+
+
+.icon-button {
+  width: 42px;
+  height: 42px;
+
+  border: 0;
+
+  border-radius:
+    50%;
+
+  background:
+    #f3f3f3;
+
+  cursor: pointer;
+
+  font-size: 18px;
+}
+
+
+/* ----------------------------------
+   Main
+----------------------------------- */
+
+.main {
+  width: 100%;
+
+  max-width: 1050px;
+
+  margin: 0 auto;
+
+  padding:
+    28px 16px;
+}
+
+
+.hero-section,
+.content-section {
+  margin-bottom:
+    42px;
+}
+
+
+.section-heading {
+  display: flex;
+
+  align-items:
+    flex-end;
+
+  justify-content:
+    space-between;
+
+  margin-bottom:
+    14px;
+}
+
+
+.section-heading h2 {
+  margin:
+    4px 0 0;
+
+  font-size:
+    21px;
+
+  letter-spacing:
+    -0.5px;
+}
+
+
+.section-label {
+  font-size:
+    11px;
+
+  font-weight:
+    700;
+
+  color:
+    #aaa;
+
+  letter-spacing:
+    1.4px;
+}
+
+
+.text-button {
+  border: 0;
+
+  background:
+    transparent;
+
+  color:
+    #777;
+
+  cursor:
+    pointer;
+
+  font-size:
+    13px;
+}
+
+
+/* ----------------------------------
+   Hero
+----------------------------------- */
+
+.hero-card,
+.best-card {
+  overflow: hidden;
+
+  border-radius:
+    22px;
+
+  background:
+    var(--surface);
+
+  box-shadow:
+    0 3px 18px
+    rgba(0, 0, 0, 0.06);
+}
+
+
+.hero-placeholder {
+  min-height:
+    330px;
+
+  display: flex;
+
+  flex-direction:
+    column;
+
+  justify-content:
+    center;
+
+  align-items:
+    center;
+
+  padding:
+    30px;
+
+  text-align:
+    center;
+
+  background:
+    linear-gradient(
+      145deg,
+      #f8f8f8,
+      #eeeeee
+    );
+}
+
+
+.hero-placeholder p {
+  margin:
+    8px 0 0;
+
+  color:
+    #888;
+
+  font-size:
+    14px;
+
+  line-height:
+    1.5;
+}
+
+
+.placeholder-icon {
+  display: block;
+
+  margin-bottom:
+    10px;
+
+  font-size:
+    35px;
+}
+
+
+/* ----------------------------------
+   Month Preview
+----------------------------------- */
+
+.preview-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap: 8px;
+}
+
+
+.preview-placeholder {
+  aspect-ratio:
+    1 / 1;
+
+  display: flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  border-radius:
+    14px;
+
+  background:
+    #ececec;
+
+  font-size:
+    30px;
+}
+
+
+/* ----------------------------------
+   Gallery
+----------------------------------- */
+
+.gallery {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap: 7px;
+}
+
+
+.photo-placeholder {
+  aspect-ratio:
+    1 / 1;
+
+  display: flex;
+
+  justify-content:
+    center;
+
+  align-items:
+    center;
+
+  background:
+    #ededed;
+
+  font-size:
+    26px;
+}
+
+
+/* ----------------------------------
+   Navigation
+----------------------------------- */
+
+.bottom-nav {
+  position: fixed;
+
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  z-index: 200;
+
+  height:
+    72px;
+
+  display: flex;
+
+  justify-content:
+    center;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.96
+    );
+
+  border-top:
+    1px solid var(--border);
+
+  backdrop-filter:
+    blur(15px);
+}
+
+
+.nav-item {
+  width:
+    min(25%, 150px);
+
+  border: 0;
+
+  background:
+    transparent;
+
+  color:
+    #999;
+
+  display: flex;
+
+  flex-direction:
+    column;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  gap: 3px;
+
+  font-size:
+    11px;
+
+  cursor:
+    pointer;
+}
+
+
+.nav-icon {
+  font-size:
+    20px;
+}
+
+
+.nav-item.active {
+  color:
+    #222;
+
+  font-weight:
+    600;
+}
+
+
+/* ----------------------------------
+   Desktop
+----------------------------------- */
+
+@media (
+  min-width: 700px
+) {
+
+  .gallery {
+    grid-template-columns:
+      repeat(4, 1fr);
+
+    gap: 10px;
+  }
+
+
+  .preview-grid {
+    gap: 12px;
+  }
+
+
+  .hero-placeholder {
+    min-height:
+      450px;
+  }
+
+}

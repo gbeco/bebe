@@ -1,61 +1,384 @@
-<!DOCTYPE html>
+<!doctype html>
+
 <html lang="ko">
 
 <head>
-    <meta charset="UTF-8">
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="icon-1024.png">
-    <link rel="stylesheet" href="style.css">
-    <script src="main.js" defer></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <title>하진이 성장 앨범</title>
+
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  >
+
+  <meta
+    name="theme-color"
+    content="#ffffff"
+  >
+
+  <title>하진이의 하루</title>
+
+  <link
+    rel="stylesheet"
+    href="./css/style.css"
+  >
+
 </head>
 
-<body class="bg-gray-50 font-sans mb-24">
 
-    <div id="upload-overlay">
-        <div class="text-6xl animate-bounce mb-4">🚀</div>
-        <h2 id="upload-status-title" class="text-xl font-bold text-gray-800">업로드 준비 중...</h2>
-        <div class="mt-4 bg-gray-100 rounded-full w-64 h-2 overflow-hidden">
-            <div id="upload-progress-bar" class="bg-pink-500 h-full w-0 transition-all"></div>
-        </div>
-        <p id="upload-status-detail" class="text-sm text-gray-500 mt-4 text-center px-6">
-            전체 0개 중 0개 처리 중...<br>
-            <span id="skip-detail" class="text-orange-500 font-bold"></span>
+<body>
+
+  <!-- -----------------------------------------
+       Header
+  ------------------------------------------ -->
+
+  <header class="header">
+
+    <div class="header-inner">
+
+      <div>
+
+        <h1 class="site-title">
+          하진이의 하루
+        </h1>
+
+        <p class="site-subtitle">
+          우리 가족의 성장앨범
         </p>
+
+      </div>
+
+
+      <button
+        id="adminButton"
+        class="icon-button"
+        type="button"
+        aria-label="관리자 로그인"
+      >
+        ⚙️
+      </button>
+
     </div>
 
-    <header class="bg-white/80 backdrop-blur-md p-6 shadow-sm sticky top-0 z-30 flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-            <button id="back-btn" class="hidden text-2xl p-2 hover:bg-gray-100 rounded-full transition-all">←</button>
-            <div>
-                <h1 id="header-title" class="text-xl font-bold text-gray-800">하진이 성장 앨범</h1>
-                <p id="d-day-display" class="text-xs text-pink-500 font-bold bg-pink-50 px-2 py-0.5 rounded-full inline-block mt-1">태어난 지 +0일</p>
-            </div>
+  </header>
+
+
+  <!-- -----------------------------------------
+       Main
+  ------------------------------------------ -->
+
+  <main class="main">
+
+    <!-- 오늘의 하진 -->
+
+    <section
+      id="todaySection"
+      class="hero-section"
+    >
+
+      <div class="section-heading">
+
+        <div>
+
+          <span class="section-label">
+            TODAY
+          </span>
+
+          <h2>
+            오늘의 하진 ❤️
+          </h2>
+
         </div>
-        <div class="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center text-2xl border-2 border-white shadow-sm"><img src="icon.svg" alt="하진이 아이콘" class="w-full h-full object-cover"></div>
-    </header>
 
-    <nav id="month-filter" class="bg-white border-b sticky top-[88px] z-20 overflow-x-auto whitespace-nowrap p-3 space-x-2 no-scrollbar">
-        <button onclick="filterByMonth('all')" class="inline-block px-4 py-2 rounded-full text-sm font-bold bg-pink-500 text-white shadow-sm transition-all">전체</button>
-    </nav>
+      </div>
 
-    <main id="main-container" class="max-w-md mx-auto p-4 relative">
-        <div id="timeline-line" class="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200 z-0"></div>
-        <div id="timeline-list" class="space-y-10 relative z-10">
-            <div class="text-center py-20 text-gray-400">사진 불러오는 중...</div>
+
+      <div class="hero-card">
+
+        <div class="hero-placeholder">
+
+          <span class="placeholder-icon">
+            📷
+          </span>
+
+          <strong>
+            오늘의 하진
+          </strong>
+
+          <p>
+            Gemini가 오늘의 사진을
+            골라줄 예정입니다.
+          </p>
+
         </div>
-    </main>
 
-    <input type="file" id="file-input" accept="image/*, video/*" class="hidden" multiple>
+      </div>
 
-    <button id="fab" class="fixed bottom-8 right-8 px-6 h-16 bg-pink-500 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-all z-40 font-bold">
-        <span id="fab-icon" class="text-3xl mr-0 transition-all">+</span>
-        <span id="fab-text" class="max-w-0 overflow-hidden whitespace-nowrap transition-all duration-300 opacity-0">업로드</span>
+    </section>
+
+
+    <!-- 이달의 하진 -->
+
+    <section
+      id="monthSection"
+      class="content-section"
+    >
+
+      <div class="section-heading">
+
+        <div>
+
+          <span class="section-label">
+            MONTH
+          </span>
+
+          <h2>
+            이달의 하진
+          </h2>
+
+        </div>
+
+
+        <button
+          class="text-button"
+          data-page="month"
+          type="button"
+        >
+          전체보기
+        </button>
+
+      </div>
+
+
+      <div
+        id="monthPreview"
+        class="preview-grid"
+      >
+
+        <div class="preview-placeholder">
+          📷
+        </div>
+
+        <div class="preview-placeholder">
+          📷
+        </div>
+
+        <div class="preview-placeholder">
+          📷
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- 베스트샷 -->
+
+    <section
+      id="bestSection"
+      class="content-section"
+    >
+
+      <div class="section-heading">
+
+        <div>
+
+          <span class="section-label">
+            BEST
+          </span>
+
+          <h2>
+            베스트샷
+          </h2>
+
+        </div>
+
+
+        <button
+          class="text-button"
+          data-page="best"
+          type="button"
+        >
+          전체보기
+        </button>
+
+      </div>
+
+
+      <div class="best-card">
+
+        <div class="hero-placeholder">
+
+          <span class="placeholder-icon">
+            🏆
+          </span>
+
+          <strong>
+            베스트샷 보기
+          </strong>
+
+          <p>
+            가족의 선택과 Gemini 추천을
+            함께 반영합니다.
+          </p>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- 최근 사진 -->
+
+    <section
+      id="gallerySection"
+      class="content-section"
+    >
+
+      <div class="section-heading">
+
+        <div>
+
+          <span class="section-label">
+            RECENT
+          </span>
+
+          <h2>
+            최근 사진
+          </h2>
+
+        </div>
+
+
+        <button
+          class="text-button"
+          data-page="all"
+          type="button"
+        >
+          전체보기
+        </button>
+
+      </div>
+
+
+      <div
+        id="gallery"
+        class="gallery"
+      >
+
+        <div class="photo-placeholder">
+          📷
+        </div>
+
+        <div class="photo-placeholder">
+          📷
+        </div>
+
+        <div class="photo-placeholder">
+          📷
+        </div>
+
+        <div class="photo-placeholder">
+          📷
+        </div>
+
+        <div class="photo-placeholder">
+          📷
+        </div>
+
+        <div class="photo-placeholder">
+          📷
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <!-- -----------------------------------------
+       Bottom Navigation
+  ------------------------------------------ -->
+
+  <nav class="bottom-nav">
+
+    <button
+      class="nav-item active"
+      data-page="home"
+      type="button"
+    >
+
+      <span class="nav-icon">
+        ❤️
+      </span>
+
+      <span>
+        오늘
+      </span>
+
     </button>
 
+
+    <button
+      class="nav-item"
+      data-page="month"
+      type="button"
+    >
+
+      <span class="nav-icon">
+        📅
+      </span>
+
+      <span>
+        이달
+      </span>
+
+    </button>
+
+
+    <button
+      class="nav-item"
+      data-page="best"
+      type="button"
+    >
+
+      <span class="nav-icon">
+        🏆
+      </span>
+
+      <span>
+        베스트
+      </span>
+
+    </button>
+
+
+    <button
+      class="nav-item"
+      data-page="all"
+      type="button"
+    >
+
+      <span class="nav-icon">
+        🖼️
+      </span>
+
+      <span>
+        전체
+      </span>
+
+    </button>
+
+  </nav>
+
+
+  <script
+    type="module"
+    src="./js/app.js"
+  ></script>
+
 </body>
+
 </html>

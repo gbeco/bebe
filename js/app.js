@@ -156,12 +156,26 @@ const monthPageTitle =
     "monthPageTitle"
   );
 
+const monthAiSection =
+  document.getElementById(
+    "monthAiSection"
+  );
+
+
+const monthAiGallery =
+  document.getElementById(
+    "monthAiGallery"
+  );
 
 const bestGallery =
   document.getElementById(
     "bestGallery"
   );
 
+const aiBestGallery =
+  document.getElementById(
+    "aiBestGallery"
+  );
 
 const allGroups =
   document.getElementById(
@@ -4314,6 +4328,222 @@ function getAiRecommendationScore(
 
 }
 
+function getPureAiRecommendationScore(
+  item
+) {
+
+  if (
+    !item.ai ||
+    item.ai.status !==
+      "done"
+  ) {
+
+    return -1;
+
+  }
+
+
+  const bestShotScore =
+    Number(
+      item.ai.bestShotScore || 0
+    );
+
+
+  const momentScore =
+    Number(
+      item.ai.momentScore || 0
+    );
+
+
+  const qualityScore =
+    Number(
+      item.ai.qualityScore || 0
+    );
+
+
+  return (
+    bestShotScore *
+      0.55 +
+
+    momentScore *
+      0.35 +
+
+    qualityScore *
+      0.10
+  );
+
+}
+
+function getRankedAiItems(
+  items,
+  limit
+) {
+
+  return [...items]
+
+    .filter(
+      (item) =>
+        item.mediaType ===
+          "photo" &&
+        item.ai?.status ===
+          "done" &&
+        item.thumbnailDriveFileId
+    )
+
+    .sort(
+      (a, b) => {
+
+        const scoreDiff =
+          getPureAiRecommendationScore(
+            b
+          ) -
+          getPureAiRecommendationScore(
+            a
+          );
+
+
+        if (
+          scoreDiff !== 0
+        ) {
+
+          return scoreDiff;
+
+        }
+
+
+        return (
+          getTakenMillis(b) -
+          getTakenMillis(a)
+        );
+
+      }
+    )
+
+    .slice(
+      0,
+      limit
+    );
+
+}
+
+function renderAiRankedGrid(
+  container,
+  items,
+  emptyText
+) {
+
+  if (!container) {
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    "";
+
+
+  if (
+    items.length === 0
+  ) {
+
+    const empty =
+      document.createElement(
+        "div"
+      );
+
+
+    empty.className =
+      "empty-message";
+
+
+    empty.textContent =
+      emptyText;
+
+
+    container.appendChild(
+      empty
+    );
+
+
+    return;
+
+  }
+
+
+  items.forEach(
+    (item, index) => {
+
+      const card =
+        createMediaCard(
+          item,
+          index,
+          items
+        );
+
+
+      card.classList.add(
+        "ai-ranked-card"
+      );
+
+
+      const rankBadge =
+        document.createElement(
+          "span"
+        );
+
+
+      rankBadge.className =
+        "ai-rank-badge";
+
+
+      rankBadge.textContent =
+        "#" +
+        String(
+          index + 1
+        );
+
+
+      const scoreBadge =
+        document.createElement(
+          "span"
+        );
+
+
+      scoreBadge.className =
+        "ai-score-badge";
+
+
+      scoreBadge.textContent =
+        "AI " +
+        String(
+          Math.round(
+            getPureAiRecommendationScore(
+              item
+            )
+          )
+        );
+
+
+      card.appendChild(
+        rankBadge
+      );
+
+
+      card.appendChild(
+        scoreBadge
+      );
+
+
+      container.appendChild(
+        card
+      );
+
+    }
+  );
+
+}
+
 function renderTodayAiPick(
   todayItems
 ) {
@@ -4604,6 +4834,39 @@ function renderViews() {
     ) +
     "월의 하진";
 
+  const monthAiItems =
+    getRankedAiItems(
+      monthItems,
+      5
+    );
+  
+  
+  if (
+    monthAiItems.length > 0
+  ) {
+  
+    monthAiSection.hidden =
+      false;
+  
+  
+    renderAiRankedGrid(
+      monthAiGallery,
+      monthAiItems,
+      ""
+    );
+  
+  }
+  
+  else {
+  
+    monthAiSection.hidden =
+      true;
+  
+  
+    monthAiGallery.innerHTML =
+      "";
+  
+  }
 
   const dayGroups =
     groupBy(
@@ -4634,6 +4897,19 @@ function renderViews() {
     bestGallery,
     bestItems,
     "아직 선택된 베스트샷이 없습니다."
+  );
+
+  const aiBestItems =
+    getRankedAiItems(
+      allMedia,
+      12
+    );
+  
+  
+  renderAiRankedGrid(
+    aiBestGallery,
+    aiBestItems,
+    "아직 AI 분석이 완료된 사진이 없습니다."
   );
 
 

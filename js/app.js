@@ -300,6 +300,25 @@ function getMediaUrl(
 
 }
 
+function getThumbnailUrl(
+  data
+) {
+
+  const fileId =
+    data.thumbnailDriveFileId ||
+    data.driveFileId;
+
+
+  return (
+    WORKER_BASE +
+    "/media/" +
+    encodeURIComponent(
+      fileId
+    )
+  );
+
+}
+
 
 // -----------------------------------------------------
 // Viewer
@@ -773,7 +792,7 @@ function createMediaCard(
 
 
   const mediaUrl =
-    getMediaUrl(
+    getThumbnailUrl(
       data
     );
 

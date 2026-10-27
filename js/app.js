@@ -2874,11 +2874,39 @@ async function uploadOneFile(
 
     catch (error) {
 
-      console.warn(
-        "썸네일 실패",
-        error
+      console.error(
+        "썸네일 생성/업로드 실패",
+        {
+          fileName:
+            file.name,
+    
+          fileType:
+            file.type,
+    
+          fileSize:
+            file.size,
+    
+          error:
+            error
+        }
       );
-
+    
+    
+      alert(
+        "썸네일 생성에 실패했습니다.\n\n" +
+        "파일: " +
+        file.name +
+        "\n" +
+        "형식: " +
+        (file.type || "알 수 없음") +
+        "\n\n" +
+        "오류: " +
+        (
+          error.message ||
+          String(error)
+        )
+      );
+    
     }
 
   }

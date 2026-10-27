@@ -2710,6 +2710,21 @@ async function registerUploadedMedia(
       mediaType
     );
 
+  let aiStatus =
+    "not_applicable";
+  
+  
+  if (
+    mediaType === "photo"
+  ) {
+  
+    aiStatus =
+      thumbnailDriveFileId
+        ? "pending"
+        : "thumbnail_missing";
+  
+  }
+
 
   await setDoc(
     doc(
@@ -2759,7 +2774,7 @@ async function registerUploadedMedia(
 
       ai: {
         status:
-          "pending"
+          aiStatus
       }
 
     }

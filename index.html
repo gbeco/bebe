@@ -69,172 +69,39 @@
 
   <main class="main">
 
-    <!-- 오늘의 하진 -->
+  <!-- =========================================
+       오늘
+  ========================================== -->
 
-    <section
-      id="todaySection"
-      class="hero-section"
-    >
+  <section
+    id="page-home"
+    class="page active"
+  >
 
-      <div class="section-heading">
+    <div class="page-heading">
 
-        <div>
+      <span class="section-label">
+        TODAY
+      </span>
 
-          <span class="section-label">
-            TODAY
-          </span>
+      <h2>
+        오늘의 하진 ❤️
+      </h2>
 
-          <h2>
-            오늘의 하진 ❤️
-          </h2>
+      <p class="section-note">
+        오늘 촬영한 사진과 영상
+      </p>
 
-        </div>
-
-      </div>
-
-
-      <div class="hero-card">
-
-        <div class="hero-placeholder">
-
-          <span class="placeholder-icon">
-            📷
-          </span>
-
-          <strong>
-            오늘의 하진
-          </strong>
-
-          <p>
-            Gemini가 오늘의 사진을
-            골라줄 예정입니다.
-          </p>
-
-        </div>
-
-      </div>
-
-    </section>
+    </div>
 
 
-    <!-- 이달의 하진 -->
-
-    <section
-      id="monthSection"
-      class="content-section"
-    >
-
-      <div class="section-heading">
-
-        <div>
-
-          <span class="section-label">
-            MONTH
-          </span>
-
-          <h2>
-            이달의 하진
-          </h2>
-
-        </div>
+    <div
+      id="todayGallery"
+      class="gallery"
+    ></div>
 
 
-        <button
-          class="text-button"
-          data-page="month"
-          type="button"
-        >
-          전체보기
-        </button>
-
-      </div>
-
-
-      <div
-        id="monthPreview"
-        class="preview-grid"
-      >
-
-        <div class="preview-placeholder">
-          📷
-        </div>
-
-        <div class="preview-placeholder">
-          📷
-        </div>
-
-        <div class="preview-placeholder">
-          📷
-        </div>
-
-      </div>
-
-    </section>
-
-
-    <!-- 베스트샷 -->
-
-    <section
-      id="bestSection"
-      class="content-section"
-    >
-
-      <div class="section-heading">
-
-        <div>
-
-          <span class="section-label">
-            BEST
-          </span>
-
-          <h2>
-            베스트샷
-          </h2>
-
-        </div>
-
-
-        <button
-          class="text-button"
-          data-page="best"
-          type="button"
-        >
-          전체보기
-        </button>
-
-      </div>
-
-
-      <div class="best-card">
-
-        <div class="hero-placeholder">
-
-          <span class="placeholder-icon">
-            🏆
-          </span>
-
-          <strong>
-            베스트샷 보기
-          </strong>
-
-          <p>
-            가족의 선택과 Gemini 추천을
-            함께 반영합니다.
-          </p>
-
-        </div>
-
-      </div>
-
-    </section>
-
-
-    <!-- 최근 사진 -->
-
-    <section
-      id="gallerySection"
-      class="content-section"
-    >
+    <div class="home-block">
 
       <div class="section-heading">
 
@@ -245,57 +112,125 @@
           </span>
 
           <h2>
-            최근 사진
+            최근 기록
           </h2>
 
         </div>
-
-
-        <button
-          class="text-button"
-          data-page="all"
-          type="button"
-        >
-          전체보기
-        </button>
 
       </div>
 
 
       <div
-        id="gallery"
+        id="recentGallery"
         class="gallery"
-      >
+      ></div>
 
-        <div class="photo-placeholder">
-          📷
-        </div>
+    </div>
 
-        <div class="photo-placeholder">
-          📷
-        </div>
+  </section>
 
-        <div class="photo-placeholder">
-          📷
-        </div>
 
-        <div class="photo-placeholder">
-          📷
-        </div>
 
-        <div class="photo-placeholder">
-          📷
-        </div>
+  <!-- =========================================
+       이달
+  ========================================== -->
 
-        <div class="photo-placeholder">
-          📷
-        </div>
+  <section
+    id="page-month"
+    class="page"
+  >
 
-      </div>
+    <div class="page-heading">
 
-    </section>
+      <span class="section-label">
+        MONTH
+      </span>
 
-  </main>
+      <h2 id="monthPageTitle">
+        이달의 하진
+      </h2>
+
+      <p class="section-note">
+        촬영일을 기준으로 정리한 이번 달 기록
+      </p>
+
+    </div>
+
+
+    <div id="monthGroups">
+    </div>
+
+  </section>
+
+
+
+  <!-- =========================================
+       베스트
+  ========================================== -->
+
+  <section
+    id="page-best"
+    class="page"
+  >
+
+    <div class="page-heading">
+
+      <span class="section-label">
+        BEST
+      </span>
+
+      <h2>
+        베스트샷 🏆
+      </h2>
+
+      <p class="section-note">
+        부모가 선택한 사진과 AI 추천 사진
+      </p>
+
+    </div>
+
+
+    <div
+      id="bestGallery"
+      class="gallery"
+    ></div>
+
+  </section>
+
+
+
+  <!-- =========================================
+       전체
+  ========================================== -->
+
+  <section
+    id="page-all"
+    class="page"
+  >
+
+    <div class="page-heading">
+
+      <span class="section-label">
+        ALL
+      </span>
+
+      <h2>
+        전체 기록
+      </h2>
+
+      <p class="section-note">
+        촬영일 기준 월별 성장 기록
+      </p>
+
+    </div>
+
+
+    <div id="allGroups">
+    </div>
+
+  </section>
+
+</main>
 
 
   <!-- -----------------------------------------

@@ -1,5 +1,6 @@
 import {
-  db
+  db,
+  auth
 } from "./firebase.js";
 
 
@@ -9,9 +10,18 @@ import {
   where,
   getDocs,
   doc,
-  getDoc
+  getDoc,
+  updateDoc
 } from
 "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged
+} from
+"https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
 
 
 const WORKER_BASE =
@@ -31,6 +41,14 @@ let allMedia = [];
 let currentViewerItems = [];
 
 let currentViewerIndex = 0;
+
+let isAdmin = false;
+
+let currentUser = null;
+
+
+const googleProvider =
+  new GoogleAuthProvider();
 
 
 // =====================================================
@@ -58,6 +76,12 @@ const pageButtons =
 const adminButton =
   document.getElementById(
     "adminButton"
+  );
+
+
+const uploadButton =
+  document.getElementById(
+    "uploadButton"
   );
 
 
@@ -549,19 +573,187 @@ pageButtons.forEach(
   }
 );
 
+// =====================================================
+// Admin Authentication
+// =====================================================
 
-// =====================================================
-// 관리자
-// =====================================================
+async function checkAdmin(
+  user
+) {
+  if (!user) {
+    return false;
+  }
+
+  const snapshot =
+    await getDoc(
+      doc(
+        db,
+        "admins",
+        user.uid
+      )
+    );
+
+  return (
+    snapshot.exists() &&
+    snapshot.data().enabled ===
+      true
+  );
+}
+
+function updateAdminUI() {
+  if (
+    isAdmin &&
+    currentUser
+  ) {
+
+    adminButton.textContent =
+      "✓";
+
+    adminButton.classList.add(
+      "admin-active"
+    );
+
+    adminButton.setAttribute(
+      "aria-label",
+      "관리자 로그아웃"
+    );
+
+    adminButton.title =
+      "관리자 로그아웃";
+
+    uploadButton.hidden =
+      false;
+  }
+
+  else {
+    adminButton.textContent =
+      "⚙️";
+
+    adminButton.classList.remove(
+      "admin-active"
+    );
+
+    adminButton.setAttribute(
+      "aria-label",
+      "관리자 로그인"
+    );
+
+    adminButton.title =
+      "관리자 로그인";
+
+    uploadButton.hidden =
+      true;
+  }
+}
 
 adminButton.addEventListener(
+  "click",
+  async () => {
+    try {
+      // 이미 관리자 로그인 상태
+      if (
+        currentUser &&
+        isAdmin
+      ) {
+        const logout =
+          window.confirm(
+            "관리자 로그아웃을 할까요?"
+          );
+
+        if (!logout) {
+          return;
+        }
+
+        await signOut(
+          auth
+        );
+
+        return;
+      }
+
+      // Google 로그인
+      await signInWithPopup(
+        auth,
+        googleProvider
+      );
+    }
+
+    catch (error) {
+      console.error(
+        "로그인 오류",
+        error
+      );
+
+      alert(
+        "Google 로그인에 실패했습니다."
+      );
+    }
+  }
+);
+
+// 기존 Worker 업로드 화면
+uploadButton.addEventListener(
   "click",
   () => {
 
     window.location.href =
       WORKER_BASE +
       "/auth/test-page";
+  }
+);
 
+// 로그인 상태 관찰
+onAuthStateChanged(
+  auth,
+  async (user) => {
+
+    currentUser =
+      user;
+
+    if (!user) {
+      isAdmin =
+        false;
+
+      updateAdminUI();
+      renderViews();
+      
+      return;
+    }
+
+    try {
+      isAdmin =
+        await checkAdmin(
+          user
+        );
+
+      if (!isAdmin) {
+        alert(
+          "관리자로 등록되지 않은 계정입니다."
+        );
+
+        await signOut(
+          auth
+        );
+
+        return;
+      }
+
+      updateAdminUI();
+
+      renderViews();
+    }
+
+    catch (error) {
+      console.error(
+        "관리자 확인 오류",
+        error
+      );
+
+      isAdmin =
+        false;
+
+      updateAdminUI();
+    }
   }
 );
 
@@ -1043,6 +1235,74 @@ mediaViewer.addEventListener(
   }
 );
 
+// =====================================================
+// Favorite
+// =====================================================
+
+async function toggleFavorite(
+  item,
+  button
+) {
+
+  if (
+    !isAdmin ||
+    !currentUser
+  ) {
+
+    return;
+
+  }
+
+
+  const nextValue =
+    item.favorite !== true;
+
+
+  button.disabled =
+    true;
+
+
+  try {
+
+    await updateDoc(
+      doc(
+        db,
+        "media",
+        item.id
+      ),
+      {
+        favorite:
+          nextValue
+      }
+    );
+
+
+    // 현재 메모리 데이터도 즉시 반영
+
+    item.favorite =
+      nextValue;
+
+
+    // 전체 화면을 다시 그림
+    renderViews();
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "베스트샷 변경 실패",
+      error
+    );
+
+
+    alert(
+      "베스트샷 변경에 실패했습니다."
+    );
+
+  }
+
+}
 
 // =====================================================
 // Gallery
@@ -1137,12 +1397,85 @@ function createMediaCard(
     image.decoding =
       "async";
 
-
     card.appendChild(
       image
     );
 
   }
+
+
+  // ---------------------------------------------
+// 관리자 Favorite 버튼
+// ---------------------------------------------
+
+if (isAdmin) {
+
+  const favoriteButton =
+    document.createElement(
+      "button"
+    );
+
+
+  favoriteButton.type =
+    "button";
+
+
+  favoriteButton.className =
+    "favorite-button";
+
+
+  if (
+    data.favorite === true
+  ) {
+
+    favoriteButton.classList.add(
+      "active"
+    );
+
+
+    favoriteButton.textContent =
+      "♥";
+
+  }
+
+  else {
+
+    favoriteButton.textContent =
+      "♡";
+
+  }
+
+
+  favoriteButton.setAttribute(
+    "aria-label",
+    data.favorite === true
+      ? "베스트샷 해제"
+      : "베스트샷 등록"
+  );
+
+
+  favoriteButton.addEventListener(
+    "click",
+    async (event) => {
+
+      // 사진 전체화면 열림 방지
+      event.stopPropagation();
+
+
+      await toggleFavorite(
+        data,
+        favoriteButton
+      );
+
+    }
+  );
+
+
+  card.appendChild(
+    favoriteButton
+  );
+
+}
 
 
   const info =

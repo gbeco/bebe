@@ -272,6 +272,40 @@ const viewerDate =
     "viewerDate"
   );
 
+const viewerCaption =
+  document.getElementById(
+    "viewerCaption"
+  );
+
+
+const viewerTags =
+  document.getElementById(
+    "viewerTags"
+  );
+
+
+const viewerAdminAi =
+  document.getElementById(
+    "viewerAdminAi"
+  );
+
+
+const viewerAiBestScore =
+  document.getElementById(
+    "viewerAiBestScore"
+  );
+
+
+const viewerAiScores =
+  document.getElementById(
+    "viewerAiScores"
+  );
+
+
+const viewerAiReason =
+  document.getElementById(
+    "viewerAiReason"
+  );
 
 const viewerName =
   document.getElementById(
@@ -1535,6 +1569,204 @@ function getThumbnailUrl(
 // Viewer
 // =====================================================
 
+function renderViewerAiInfo(
+  data
+) {
+
+  const ai =
+    data.ai;
+
+
+  // =============================================
+  // 초기화
+  // =============================================
+
+  viewerCaption.textContent =
+    "";
+
+
+  viewerCaption.hidden =
+    true;
+
+
+  viewerTags.innerHTML =
+    "";
+
+
+  viewerTags.hidden =
+    true;
+
+
+  viewerAdminAi.hidden =
+    true;
+
+
+  viewerAiBestScore.textContent =
+    "";
+
+
+  viewerAiScores.textContent =
+    "";
+
+
+  viewerAiReason.textContent =
+    "";
+
+
+  // =============================================
+  // AI 분석 완료 사진만 표시
+  // =============================================
+
+  if (
+    data.mediaType !==
+      "photo" ||
+    !ai ||
+    ai.status !==
+      "done"
+  ) {
+
+    return;
+
+  }
+
+
+  // =============================================
+  // 일반 사용자에게도 보이는 AI 설명
+  // =============================================
+
+  if (
+    ai.caption
+  ) {
+
+    viewerCaption.textContent =
+      ai.caption;
+
+
+    viewerCaption.hidden =
+      false;
+
+  }
+
+
+  // =============================================
+  // 태그
+  // =============================================
+
+  const tags =
+    Array.isArray(
+      ai.tags
+    )
+      ? ai.tags
+      : [];
+
+
+  if (
+    tags.length > 0
+  ) {
+
+    tags.forEach(
+      (tag) => {
+
+        const tagElement =
+          document.createElement(
+            "span"
+          );
+
+
+        tagElement.className =
+          "viewer-tag";
+
+
+        tagElement.textContent =
+          "#" +
+          String(
+            tag
+          );
+
+
+        viewerTags.appendChild(
+          tagElement
+        );
+
+      }
+    );
+
+
+    viewerTags.hidden =
+      false;
+
+  }
+
+
+  // =============================================
+  // 관리자 전용 AI 정보
+  // =============================================
+
+  if (
+    !isAdmin ||
+    !currentUser
+  ) {
+
+    return;
+
+  }
+
+
+  viewerAdminAi.hidden =
+    false;
+
+
+  const bestScore =
+    Math.round(
+      Number(
+        ai.bestShotScore ||
+        0
+      )
+    );
+
+
+  const momentScore =
+    Math.round(
+      Number(
+        ai.momentScore ||
+        0
+      )
+    );
+
+
+  const qualityScore =
+    Math.round(
+      Number(
+        ai.qualityScore ||
+        0
+      )
+    );
+
+
+  viewerAiBestScore.textContent =
+    "추천 " +
+    bestScore +
+    "점";
+
+
+  viewerAiScores.textContent =
+    "순간성 " +
+    momentScore +
+    " · 사진 품질 " +
+    qualityScore;
+
+
+  if (
+    ai.bestShotReason
+  ) {
+
+    viewerAiReason.textContent =
+      ai.bestShotReason;
+
+  }
+
+}
+
 function renderViewer() {
 
   if (
@@ -1638,6 +1870,10 @@ function renderViewer() {
     formatTakenDate(
       data
     );
+
+  renderViewerAiInfo(
+    data
+  );
 
 
   viewerName.textContent =

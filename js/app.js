@@ -11,7 +11,9 @@ import {
   getDocs,
   doc,
   getDoc,
-  updateDoc
+  updateDoc,
+  setDoc,
+  serverTimestamp
 } from
 "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
 
@@ -45,6 +47,11 @@ let currentViewerIndex = 0;
 let isAdmin = false;
 
 let currentUser = null;
+
+let selectedUploadFiles = [];
+
+let isUploading =
+  false;
 
 
 const googleProvider =
@@ -118,6 +125,41 @@ const bestGallery =
 const allGroups =
   document.getElementById(
     "allGroups"
+  );
+
+const uploadModal =
+  document.getElementById(
+    "uploadModal"
+  );
+
+
+const uploadCloseButton =
+  document.getElementById(
+    "uploadCloseButton"
+  );
+
+
+const uploadFileInput =
+  document.getElementById(
+    "uploadFileInput"
+  );
+
+
+const uploadFileList =
+  document.getElementById(
+    "uploadFileList"
+  );
+
+
+const uploadSummary =
+  document.getElementById(
+    "uploadSummary"
+  );
+
+
+const uploadStartButton =
+  document.getElementById(
+    "uploadStartButton"
   );
 
 
@@ -691,14 +733,17 @@ adminButton.addEventListener(
   }
 );
 
-// 기존 Worker 업로드 화면
 uploadButton.addEventListener(
   "click",
   () => {
 
-    window.location.href =
-      WORKER_BASE +
-      "/auth/test-page";
+    if (!isAdmin) {
+      return;
+    }
+
+
+    openUploadModal();
+
   }
 );
 
@@ -1229,6 +1274,1195 @@ mediaViewer.addEventListener(
   },
   {
     passive: true
+  }
+);
+
+// =====================================================
+// Upload Modal
+// =====================================================
+
+function openUploadModal() {
+
+  selectedUploadFiles =
+    [];
+
+
+  uploadFileInput.value =
+    "";
+
+
+  uploadFileList.innerHTML =
+    "";
+
+
+  uploadSummary.textContent =
+    "파일을 선택해주세요.";
+
+
+  uploadStartButton.disabled =
+    true;
+
+
+  uploadModal.classList.add(
+    "open"
+  );
+
+
+  uploadModal.setAttribute(
+    "aria-hidden",
+    "false"
+  );
+
+
+  document.body.style.overflow =
+    "hidden";
+
+}
+
+
+function closeUploadModal() {
+
+  if (isUploading) {
+
+    alert(
+      "업로드가 진행 중입니다."
+    );
+
+    return;
+
+  }
+
+
+  uploadModal.classList.remove(
+    "open"
+  );
+
+
+  uploadModal.setAttribute(
+    "aria-hidden",
+    "true"
+  );
+
+
+  document.body.style.overflow =
+    "";
+
+}
+
+
+// =====================================================
+// Upload UI
+// =====================================================
+
+function renderUploadFiles() {
+
+  uploadFileList.innerHTML =
+    "";
+
+
+  selectedUploadFiles.forEach(
+    (item, index) => {
+
+      const row =
+        document.createElement(
+          "div"
+        );
+
+
+      row.className =
+        "upload-file-item";
+
+
+      row.dataset.index =
+        String(index);
+
+
+      row.innerHTML =
+        `
+          <div class="upload-file-top">
+
+            <div class="upload-file-name">
+            </div>
+
+            <div class="upload-file-status">
+              준비
+            </div>
+
+          </div>
+
+          <div class="upload-progress">
+
+            <div
+              class="upload-progress-bar"
+            ></div>
+
+          </div>
+        `;
+
+
+      row.querySelector(
+        ".upload-file-name"
+      ).textContent =
+        item.file.name;
+
+
+      uploadFileList.appendChild(
+        row
+      );
+
+    }
+  );
+
+
+  uploadSummary.textContent =
+    selectedUploadFiles.length +
+    "개 파일 선택";
+
+
+  uploadStartButton.textContent =
+    selectedUploadFiles.length +
+    "개 업로드";
+
+
+  uploadStartButton.disabled =
+    selectedUploadFiles.length ===
+      0;
+
+}
+
+
+function updateUploadRow(
+  index,
+  status,
+  progress,
+  type = ""
+) {
+
+  const row =
+    uploadFileList.querySelector(
+      '[data-index="' +
+      index +
+      '"]'
+    );
+
+
+  if (!row) {
+    return;
+  }
+
+
+  const statusElement =
+    row.querySelector(
+      ".upload-file-status"
+    );
+
+
+  const progressElement =
+    row.querySelector(
+      ".upload-progress-bar"
+    );
+
+
+  statusElement.textContent =
+    status;
+
+
+  statusElement.className =
+    "upload-file-status";
+
+
+  if (type) {
+
+    statusElement.classList.add(
+      type
+    );
+
+  }
+
+
+  progressElement.style.width =
+    Math.max(
+      0,
+      Math.min(
+        100,
+        progress
+      )
+    ) +
+    "%";
+
+}
+
+
+// =====================================================
+// File type
+// =====================================================
+
+function getUploadMediaType(
+  file
+) {
+
+  if (
+    file.type.startsWith(
+      "image/"
+    )
+  ) {
+
+    return "photo";
+
+  }
+
+
+  if (
+    file.type.startsWith(
+      "video/"
+    )
+  ) {
+
+    return "video";
+
+  }
+
+
+  return null;
+
+}
+
+
+// =====================================================
+// EXIF 촬영일
+// =====================================================
+
+async function getUploadTakenAt(
+  file,
+  mediaType
+) {
+
+  if (
+    mediaType !==
+      "photo"
+  ) {
+
+    return new Date(
+      file.lastModified ||
+      Date.now()
+    );
+
+  }
+
+
+  try {
+
+    if (window.exifr) {
+
+      const metadata =
+        await window.exifr.parse(
+          file,
+          [
+            "DateTimeOriginal",
+            "CreateDate",
+            "ModifyDate"
+          ]
+        );
+
+
+      if (
+        metadata?.DateTimeOriginal
+      ) {
+
+        return new Date(
+          metadata.DateTimeOriginal
+        );
+
+      }
+
+
+      if (
+        metadata?.CreateDate
+      ) {
+
+        return new Date(
+          metadata.CreateDate
+        );
+
+      }
+
+
+      if (
+        metadata?.ModifyDate
+      ) {
+
+        return new Date(
+          metadata.ModifyDate
+        );
+
+      }
+
+    }
+
+  }
+
+  catch (error) {
+
+    console.warn(
+      "EXIF 읽기 실패",
+      error
+    );
+
+  }
+
+
+  return new Date(
+    file.lastModified ||
+    Date.now()
+  );
+
+}
+
+
+// =====================================================
+// Thumbnail
+// =====================================================
+
+function createUploadThumbnail(
+  file
+) {
+
+  return new Promise(
+    (resolve, reject) => {
+
+      const image =
+        new Image();
+
+
+      const objectUrl =
+        URL.createObjectURL(
+          file
+        );
+
+
+      image.onload =
+        () => {
+
+          try {
+
+            const maxSize =
+              1200;
+
+
+            let width =
+              image.naturalWidth;
+
+
+            let height =
+              image.naturalHeight;
+
+
+            if (
+              width > maxSize ||
+              height > maxSize
+            ) {
+
+              const ratio =
+                Math.min(
+                  maxSize / width,
+                  maxSize / height
+                );
+
+
+              width =
+                Math.round(
+                  width * ratio
+                );
+
+
+              height =
+                Math.round(
+                  height * ratio
+                );
+
+            }
+
+
+            const canvas =
+              document.createElement(
+                "canvas"
+              );
+
+
+            canvas.width =
+              width;
+
+
+            canvas.height =
+              height;
+
+
+            const context =
+              canvas.getContext(
+                "2d"
+              );
+
+
+            context.drawImage(
+              image,
+              0,
+              0,
+              width,
+              height
+            );
+
+
+            canvas.toBlob(
+              (blob) => {
+
+                URL.revokeObjectURL(
+                  objectUrl
+                );
+
+
+                if (!blob) {
+
+                  reject(
+                    new Error(
+                      "썸네일 생성 실패"
+                    )
+                  );
+
+                  return;
+
+                }
+
+
+                resolve(blob);
+
+              },
+              "image/jpeg",
+              0.82
+            );
+
+          }
+
+          catch (error) {
+
+            URL.revokeObjectURL(
+              objectUrl
+            );
+
+
+            reject(error);
+
+          }
+
+        };
+
+
+      image.onerror =
+        () => {
+
+          URL.revokeObjectURL(
+            objectUrl
+          );
+
+
+          reject(
+            new Error(
+              "이미지를 읽을 수 없습니다."
+            )
+          );
+
+        };
+
+
+      image.src =
+        objectUrl;
+
+    }
+  );
+
+}
+
+
+// =====================================================
+// Worker upload session
+// =====================================================
+
+async function createUploadSession(
+  file,
+  mediaType,
+  idToken
+) {
+
+  const response =
+    await fetch(
+      WORKER_BASE +
+      "/upload/start",
+      {
+
+        method:
+          "POST",
+
+        headers: {
+
+          Authorization:
+            "Bearer " +
+            idToken,
+
+          "Content-Type":
+            "application/json"
+
+        },
+
+        body:
+          JSON.stringify({
+
+            fileName:
+              file.name,
+
+            mimeType:
+              file.type ||
+              "application/octet-stream",
+
+            fileSize:
+              file.size,
+
+            mediaType:
+              mediaType
+
+          })
+
+      }
+    );
+
+
+  const data =
+    await response.json();
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      data.error ||
+      "업로드 준비 실패"
+    );
+
+  }
+
+
+  return data.uploadUrl;
+
+}
+
+
+// =====================================================
+// 8 MiB Chunk Upload
+// =====================================================
+
+async function uploadFileInChunks(
+  uploadUrl,
+  file,
+  idToken,
+  onProgress
+) {
+
+  const chunkSize =
+    8 *
+    1024 *
+    1024;
+
+
+  let start =
+    0;
+
+
+  while (
+    start <
+    file.size
+  ) {
+
+    const endExclusive =
+      Math.min(
+        start +
+        chunkSize,
+        file.size
+      );
+
+
+    const end =
+      endExclusive -
+      1;
+
+
+    const chunk =
+      file.slice(
+        start,
+        endExclusive
+      );
+
+
+    const response =
+      await fetch(
+        WORKER_BASE +
+        "/upload/chunk",
+        {
+
+          method:
+            "POST",
+
+          headers: {
+
+            Authorization:
+              "Bearer " +
+              idToken,
+
+            "Content-Type":
+              "application/octet-stream",
+
+            "X-Drive-Upload-Url":
+              uploadUrl,
+
+            "X-Upload-Start":
+              String(start),
+
+            "X-Upload-End":
+              String(end),
+
+            "X-Upload-Total":
+              String(
+                file.size
+              ),
+
+            "X-File-Type":
+              file.type ||
+              "application/octet-stream"
+
+          },
+
+          body:
+            chunk
+
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        data.error ||
+        "파일 업로드 실패"
+      );
+
+    }
+
+
+    const uploaded =
+      endExclusive;
+
+
+    if (onProgress) {
+
+      onProgress(
+        Math.round(
+          (
+            uploaded /
+            file.size
+          ) *
+          100
+        )
+      );
+
+    }
+
+
+    if (
+      data.complete === true
+    ) {
+
+      return data.driveFile;
+
+    }
+
+
+    start =
+      endExclusive;
+
+  }
+
+
+  throw new Error(
+    "업로드 완료 응답을 받지 못했습니다."
+  );
+
+}
+
+
+// =====================================================
+// Thumbnail upload
+// =====================================================
+
+async function uploadThumbnailFile(
+  originalDriveFile,
+  originalFile,
+  idToken
+) {
+
+  const blob =
+    await createUploadThumbnail(
+      originalFile
+    );
+
+
+  const thumbnail =
+    new File(
+      [blob],
+      originalDriveFile.id +
+        ".jpg",
+      {
+        type:
+          "image/jpeg"
+      }
+    );
+
+
+  const uploadUrl =
+    await createUploadSession(
+      thumbnail,
+      "thumbnail",
+      idToken
+    );
+
+
+  return await uploadFileInChunks(
+    uploadUrl,
+    thumbnail,
+    idToken
+  );
+
+}
+
+
+// =====================================================
+// Firestore 등록
+// =====================================================
+
+async function registerUploadedMedia(
+  driveFile,
+  file,
+  mediaType,
+  thumbnailDriveFileId
+) {
+
+  const takenAt =
+    await getUploadTakenAt(
+      file,
+      mediaType
+    );
+
+
+  await setDoc(
+    doc(
+      db,
+      "media",
+      driveFile.id
+    ),
+    {
+
+      driveFileId:
+        driveFile.id,
+
+      thumbnailDriveFileId:
+        thumbnailDriveFileId ||
+        null,
+
+      name:
+        driveFile.name ||
+        file.name,
+
+      mimeType:
+        driveFile.mimeType ||
+        file.type ||
+        "application/octet-stream",
+
+      mediaType:
+        mediaType,
+
+      size:
+        Number(
+          driveFile.size ||
+          file.size ||
+          0
+        ),
+
+      takenAt:
+        takenAt,
+
+      uploadedAt:
+        serverTimestamp(),
+
+      published:
+        true,
+
+      favorite:
+        false,
+
+      ai: {
+        status:
+          "pending"
+      }
+
+    }
+  );
+
+}
+
+
+// =====================================================
+// Single File Upload
+// =====================================================
+
+async function uploadOneFile(
+  item,
+  index,
+  idToken
+) {
+
+  const file =
+    item.file;
+
+
+  const mediaType =
+    getUploadMediaType(
+      file
+    );
+
+
+  if (!mediaType) {
+
+    throw new Error(
+      "지원하지 않는 파일 형식입니다."
+    );
+
+  }
+
+
+  updateUploadRow(
+    index,
+    "원본 준비",
+    2
+  );
+
+
+  const uploadUrl =
+    await createUploadSession(
+      file,
+      mediaType,
+      idToken
+    );
+
+
+  updateUploadRow(
+    index,
+    "원본 업로드",
+    5
+  );
+
+
+  const driveFile =
+    await uploadFileInChunks(
+      uploadUrl,
+      file,
+      idToken,
+      (percent) => {
+
+        updateUploadRow(
+          index,
+          "원본 " +
+            percent +
+            "%",
+          Math.round(
+            5 +
+            percent *
+            0.75
+          )
+        );
+
+      }
+    );
+
+
+  let thumbnailDriveFileId =
+    null;
+
+
+  if (
+    mediaType === "photo"
+  ) {
+
+    updateUploadRow(
+      index,
+      "썸네일 생성",
+      82
+    );
+
+
+    try {
+
+      const thumbnailDriveFile =
+        await uploadThumbnailFile(
+          driveFile,
+          file,
+          idToken
+        );
+
+
+      thumbnailDriveFileId =
+        thumbnailDriveFile.id;
+
+    }
+
+    catch (error) {
+
+      console.warn(
+        "썸네일 실패",
+        error
+      );
+
+    }
+
+  }
+
+
+  updateUploadRow(
+    index,
+    "사진첩 등록",
+    95
+  );
+
+
+  await registerUploadedMedia(
+    driveFile,
+    file,
+    mediaType,
+    thumbnailDriveFileId
+  );
+
+
+  updateUploadRow(
+    index,
+    "완료",
+    100,
+    "success"
+  );
+
+}
+
+uploadFileInput.addEventListener(
+  "change",
+  () => {
+
+    const files =
+      Array.from(
+        uploadFileInput.files ||
+        []
+      );
+
+
+    selectedUploadFiles =
+      files
+        .filter(
+          (file) =>
+            file.type.startsWith(
+              "image/"
+            ) ||
+            file.type.startsWith(
+              "video/"
+            )
+        )
+        .map(
+          (file) => ({
+            file
+          })
+        );
+
+
+    renderUploadFiles();
+
+  }
+);
+
+
+uploadCloseButton.addEventListener(
+  "click",
+  closeUploadModal
+);
+
+
+uploadModal.addEventListener(
+  "click",
+  (event) => {
+
+    if (
+      event.target ===
+        uploadModal
+    ) {
+
+      closeUploadModal();
+
+    }
+
+  }
+);
+
+uploadStartButton.addEventListener(
+  "click",
+  async () => {
+
+    if (
+      !isAdmin ||
+      !currentUser ||
+      selectedUploadFiles.length ===
+        0 ||
+      isUploading
+    ) {
+
+      return;
+
+    }
+
+
+    isUploading =
+      true;
+
+
+    uploadStartButton.disabled =
+      true;
+
+
+    uploadCloseButton.disabled =
+      true;
+
+
+    try {
+
+      const idToken =
+        await currentUser
+          .getIdToken();
+
+
+      let successCount =
+        0;
+
+
+      let failureCount =
+        0;
+
+
+      for (
+        let index = 0;
+        index <
+        selectedUploadFiles.length;
+        index++
+      ) {
+
+        uploadSummary.textContent =
+          String(
+            index + 1
+          ) +
+          " / " +
+          String(
+            selectedUploadFiles.length
+          ) +
+          " 업로드 중";
+
+
+        try {
+
+          await uploadOneFile(
+            selectedUploadFiles[
+              index
+            ],
+            index,
+            idToken
+          );
+
+
+          successCount++;
+
+        }
+
+        catch (error) {
+
+          console.error(
+            "파일 업로드 실패",
+            error
+          );
+
+
+          failureCount++;
+
+
+          updateUploadRow(
+            index,
+            "실패",
+            100,
+            "error"
+          );
+
+        }
+
+      }
+
+
+      uploadSummary.textContent =
+        "완료 " +
+        successCount +
+        "개" +
+        (
+          failureCount > 0
+            ? " · 실패 " +
+              failureCount +
+              "개"
+            : ""
+        );
+
+
+      // Firestore 다시 읽어서
+      // 갤러리 즉시 갱신
+      await loadMedia();
+
+
+      uploadStartButton.textContent =
+        "업로드 완료";
+
+    }
+
+    catch (error) {
+
+      console.error(
+        "업로드 오류",
+        error
+      );
+
+
+      uploadSummary.textContent =
+        "업로드 중 오류가 발생했습니다.";
+
+    }
+
+    finally {
+
+      isUploading =
+        false;
+
+
+      uploadCloseButton.disabled =
+        false;
+
+    }
+
   }
 );
 

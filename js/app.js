@@ -490,39 +490,108 @@ async function processPendingAiQueue(
       [];
 
 
+    const skippedItems =
+      [];
+    
+    
     snapshot.forEach(
       (documentSnapshot) => {
-
+    
         const item = {
-
+    
           id:
             documentSnapshot.id,
-
+    
           ...documentSnapshot.data()
-
+    
         };
-
-
-        // 현재는 사진만 AI 분석
+    
+    
+        console.log(
+          "pending 문서 확인:",
+          {
+            id:
+              item.id,
+    
+            name:
+              item.name,
+    
+            mediaType:
+              item.mediaType,
+    
+            thumbnailDriveFileId:
+              item.thumbnailDriveFileId,
+    
+            aiStatus:
+              item.ai?.status
+          }
+        );
+    
+    
         if (
-          item.mediaType ===
-            "photo" &&
-          item.thumbnailDriveFileId
+          item.mediaType !==
+            "photo"
         ) {
-
-          pendingItems.push(
-            item
-          );
-
+    
+          skippedItems.push({
+            item,
+            reason:
+              "mediaType이 photo가 아님"
+          });
+    
+    
+          return;
+    
         }
-
+    
+    
+        if (
+          !item.thumbnailDriveFileId
+        ) {
+    
+          skippedItems.push({
+            item,
+            reason:
+              "thumbnailDriveFileId 없음"
+          });
+    
+    
+          return;
+    
+        }
+    
+    
+        pendingItems.push(
+          item
+        );
+    
       }
     );
 
 
     console.log(
-      "Firestore pending 사진:",
-      pendingItems.length
+      "Firestore pending 조회 결과:",
+      {
+        total:
+          snapshot.size,
+    
+        analyzable:
+          pendingItems.length,
+    
+        skipped:
+          skippedItems.map(
+            (entry) => ({
+              id:
+                entry.item.id,
+    
+              name:
+                entry.item.name,
+    
+              reason:
+                entry.reason
+            })
+          )
+      }
     );
 
 
@@ -533,23 +602,59 @@ async function processPendingAiQueue(
     if (
       pendingItems.length === 0
     ) {
-
-      console.log(
-        "AI 분석 대기 사진 없음"
-      );
-
-
-      if (showMessage) {
-
-        alert(
-          "AI 분석 대기 중인 사진이 없습니다."
+    
+      if (
+        snapshot.size > 0
+      ) {
+    
+        const reasons =
+          skippedItems
+            .map(
+              (entry) =>
+                (entry.item.name ||
+                  entry.item.id) +
+                "\n→ " +
+                entry.reason
+            )
+            .join(
+              "\n\n"
+            );
+    
+    
+        console.warn(
+          "pending 문서는 있지만 분석 조건에서 제외됨",
+          skippedItems
         );
-
+    
+    
+        if (showMessage) {
+    
+          alert(
+            "pending 사진은 " +
+            snapshot.size +
+            "장 있지만 AI 분석 조건에서 제외되었습니다.\n\n" +
+            reasons
+          );
+    
+        }
+    
       }
-
-
+    
+      else {
+    
+        if (showMessage) {
+    
+          alert(
+            "Firestore에 ai.status = pending인 사진이 없습니다."
+          );
+    
+        }
+    
+      }
+    
+    
       return;
-
+    
     }
 
 

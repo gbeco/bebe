@@ -109,6 +109,35 @@ const todayGallery =
     "todayGallery"
   );
 
+const todayAiPick =
+  document.getElementById(
+    "todayAiPick"
+  );
+
+
+const todayAiPickImage =
+  document.getElementById(
+    "todayAiPickImage"
+  );
+
+
+const todayAiPickScore =
+  document.getElementById(
+    "todayAiPickScore"
+  );
+
+
+const todayAiPickCaption =
+  document.getElementById(
+    "todayAiPickCaption"
+  );
+
+
+const todayAiPickReason =
+  document.getElementById(
+    "todayAiPickReason"
+  );
+
 
 const recentGallery =
   document.getElementById(
@@ -4227,6 +4256,235 @@ function renderHiddenMedia() {
 
 }
 
+// =====================================================
+// AI Recommendation
+// =====================================================
+
+function getAiRecommendationScore(
+  item
+) {
+
+  if (
+    !item.ai ||
+    item.ai.status !==
+      "done"
+  ) {
+
+    return -1;
+
+  }
+
+
+  const bestShotScore =
+    Number(
+      item.ai.bestShotScore || 0
+    );
+
+
+  const momentScore =
+    Number(
+      item.ai.momentScore || 0
+    );
+
+
+  const qualityScore =
+    Number(
+      item.ai.qualityScore || 0
+    );
+
+
+  const favoriteBonus =
+    item.favorite === true
+      ? 5
+      : 0;
+
+
+  return (
+    bestShotScore *
+      0.55 +
+
+    momentScore *
+      0.35 +
+
+    qualityScore *
+      0.10 +
+
+    favoriteBonus
+  );
+
+}
+
+function renderTodayAiPick(
+  todayItems
+) {
+
+  if (
+    !todayAiPick ||
+    !todayAiPickImage ||
+    !todayAiPickScore ||
+    !todayAiPickCaption ||
+    !todayAiPickReason
+  ) {
+
+    return;
+
+  }
+
+
+  const candidates =
+    todayItems.filter(
+      (item) =>
+        item.mediaType ===
+          "photo" &&
+        item.ai?.status ===
+          "done" &&
+        item.thumbnailDriveFileId
+    );
+
+
+  // AI 분석 완료 사진이 없으면
+  // 대표카드를 숨김
+  if (
+    candidates.length === 0
+  ) {
+
+    todayAiPick.hidden =
+      true;
+
+
+    todayAiPickImage.removeAttribute(
+      "src"
+    );
+
+
+    return;
+
+  }
+
+
+  // 추천 점수 높은 순
+  // 동점이면 더 최근 사진 우선
+  const ranked =
+    [...candidates].sort(
+      (a, b) => {
+
+        const scoreDifference =
+          getAiRecommendationScore(
+            b
+          ) -
+          getAiRecommendationScore(
+            a
+          );
+
+
+        if (
+          scoreDifference !== 0
+        ) {
+
+          return scoreDifference;
+
+        }
+
+
+        return (
+          getTakenMillis(b) -
+          getTakenMillis(a)
+        );
+
+      }
+    );
+
+
+  const selected =
+    ranked[0];
+
+
+  const selectedIndex =
+    todayItems.findIndex(
+      (item) =>
+        item.id ===
+        selected.id
+    );
+
+
+  todayAiPickImage.src =
+    getThumbnailUrl(
+      selected
+    );
+
+
+  todayAiPickImage.alt =
+    selected.ai?.caption ||
+    selected.name ||
+    "오늘의 하진";
+
+
+  todayAiPickScore.textContent =
+    "베스트샷 " +
+    String(
+      Math.round(
+        Number(
+          selected.ai?.bestShotScore ||
+          0
+        )
+      )
+    ) +
+    "점";
+
+
+  todayAiPickCaption.textContent =
+    selected.ai?.caption ||
+    "오늘의 추천 사진";
+
+
+  todayAiPickReason.textContent =
+    selected.ai?.bestShotReason ||
+    "";
+
+
+  todayAiPickReason.hidden =
+    !selected.ai?.bestShotReason;
+
+
+  todayAiPick.hidden =
+    false;
+
+
+  // 클릭하면 기존 전체화면 Viewer
+  todayAiPick.onclick =
+    () => {
+
+      openViewer(
+        todayItems,
+        selectedIndex
+      );
+
+    };
+
+
+  todayAiPick.onkeydown =
+    (event) => {
+
+      if (
+        event.key ===
+          "Enter" ||
+        event.key ===
+          " "
+      ) {
+
+        event.preventDefault();
+
+
+        openViewer(
+          todayItems,
+          selectedIndex
+        );
+
+      }
+
+    };
+
+}
 
 // =====================================================
 // View Rendering
@@ -4277,6 +4535,9 @@ function renderViews() {
       }
     );
 
+  renderTodayAiPick(
+    todayItems
+  );
 
   renderGrid(
     todayGallery,

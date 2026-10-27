@@ -270,6 +270,240 @@ body {
     35px;
 }
 
+/* ----------------------------------
+   Today AI Pick
+----------------------------------- */
+
+.today-ai-pick {
+  position: relative;
+
+  width: 100%;
+
+  margin:
+    0 0 26px;
+
+  overflow: hidden;
+
+  border-radius:
+    22px;
+
+  aspect-ratio:
+    4 / 5;
+
+  background:
+    #e9e9e9;
+
+  cursor:
+    pointer;
+
+  box-shadow:
+    0 5px 24px
+    rgba(0, 0, 0, 0.08);
+}
+
+
+.today-ai-pick[hidden] {
+  display: none;
+}
+
+
+.today-ai-pick-image {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit:
+    cover;
+}
+
+
+.today-ai-pick-overlay {
+  position: absolute;
+
+  inset: 0;
+
+  padding:
+    18px;
+
+  display: flex;
+
+  flex-direction:
+    column;
+
+  justify-content:
+    space-between;
+
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(0,0,0,0.20) 0%,
+      rgba(0,0,0,0.02) 38%,
+      rgba(0,0,0,0.72) 100%
+    );
+
+  color:
+    #fff;
+}
+
+
+.today-ai-pick-top {
+  display: flex;
+
+  justify-content:
+    space-between;
+
+  align-items:
+    center;
+
+  gap:
+    10px;
+}
+
+
+.today-ai-pick-badge {
+  padding:
+    7px 10px;
+
+  border-radius:
+    999px;
+
+  background:
+    rgba(255,255,255,0.92);
+
+  color:
+    #222;
+
+  font-size:
+    11px;
+
+  font-weight:
+    800;
+
+  letter-spacing:
+    1px;
+}
+
+
+.today-ai-pick-score {
+  padding:
+    7px 10px;
+
+  border-radius:
+    999px;
+
+  background:
+    rgba(0,0,0,0.35);
+
+  backdrop-filter:
+    blur(8px);
+
+  font-size:
+    12px;
+
+  font-weight:
+    700;
+}
+
+
+.today-ai-pick-text {
+  max-width:
+    720px;
+}
+
+
+.today-ai-pick-title {
+  margin-bottom:
+    7px;
+
+  font-size:
+    13px;
+
+  font-weight:
+    700;
+
+  opacity:
+    0.9;
+}
+
+
+.today-ai-pick-caption {
+  margin:
+    0;
+
+  font-size:
+    23px;
+
+  font-weight:
+    700;
+
+  line-height:
+    1.35;
+
+  letter-spacing:
+    -0.6px;
+}
+
+
+.today-ai-pick-reason {
+  margin:
+    9px 0 0;
+
+  max-width:
+    720px;
+
+  color:
+    rgba(255,255,255,0.83);
+
+  font-size:
+    13px;
+
+  line-height:
+    1.55;
+}
+
+
+.today-ai-pick:focus-visible {
+  outline:
+    3px solid
+    rgba(0,0,0,0.25);
+
+  outline-offset:
+    3px;
+}
+
+
+@media (
+  min-width: 700px
+) {
+
+  .today-ai-pick {
+    aspect-ratio:
+      16 / 9;
+
+    max-height:
+      590px;
+  }
+
+
+  .today-ai-pick-overlay {
+    padding:
+      26px;
+  }
+
+
+  .today-ai-pick-caption {
+    font-size:
+      30px;
+  }
+
+
+  .today-ai-pick-reason {
+    font-size:
+      14px;
+  }
+
+}
 
 /* ----------------------------------
    Month Preview

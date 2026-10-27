@@ -394,8 +394,11 @@ async function analyzeMediaWithRetry(
 
 }
 
-async function processPendingAiQueue() {
+async function processPendingAiQueue(
+  showMessage = false
+) {
 
+  // 이미 다른 AI 작업이 실행 중
   if (
     aiQueueInProgress
   ) {
@@ -403,6 +406,16 @@ async function processPendingAiQueue() {
     console.log(
       "AI 대기열이 이미 실행 중입니다."
     );
+
+
+    if (showMessage) {
+
+      alert(
+        "AI 분석이 이미 진행 중입니다."
+      );
+
+    }
+
 
     return;
 
@@ -414,36 +427,14 @@ async function processPendingAiQueue() {
     !currentUser
   ) {
 
-    return;
+    if (showMessage) {
 
-  }
+      alert(
+        "관리자 로그인이 필요합니다."
+      );
 
+    }
 
-  // 공개 + 비공개 항목 모두 확인
-  const mediaItems = [
-    ...allMedia,
-    ...hiddenMedia
-  ];
-
-
-  const pendingItems =
-    mediaItems.filter(
-      (item) =>
-        item.mediaType ===
-          "photo" &&
-        item.thumbnailDriveFileId &&
-        item.ai?.status ===
-          "pending"
-    );
-
-
-  if (
-    pendingItems.length === 0
-  ) {
-
-    console.log(
-      "AI 분석 대기 사진 없음"
-    );
 
     return;
 
@@ -454,13 +445,131 @@ async function processPendingAiQueue() {
     true;
 
 
-  console.log(
-    "AI 자동 분석 시작",
-    pendingItems.length
-  );
+  if (aiAnalyzeButton) {
+
+    aiAnalyzeButton.disabled =
+      true;
+
+
+    aiAnalyzeButton.textContent =
+      "확인 중";
+
+  }
 
 
   try {
+
+    // =============================================
+    // Firestore에서 pending을 직접 다시 조회
+    // =============================================
+
+    const pendingQuery =
+      query(
+
+        collection(
+          db,
+          "media"
+        ),
+
+        where(
+          "ai.status",
+          "==",
+          "pending"
+        )
+
+      );
+
+
+    const snapshot =
+      await getDocs(
+        pendingQuery
+      );
+
+
+    const pendingItems =
+      [];
+
+
+    snapshot.forEach(
+      (documentSnapshot) => {
+
+        const item = {
+
+          id:
+            documentSnapshot.id,
+
+          ...documentSnapshot.data()
+
+        };
+
+
+        // 현재는 사진만 AI 분석
+        if (
+          item.mediaType ===
+            "photo" &&
+          item.thumbnailDriveFileId
+        ) {
+
+          pendingItems.push(
+            item
+          );
+
+        }
+
+      }
+    );
+
+
+    console.log(
+      "Firestore pending 사진:",
+      pendingItems.length
+    );
+
+
+    // =============================================
+    // pending 없음
+    // =============================================
+
+    if (
+      pendingItems.length === 0
+    ) {
+
+      console.log(
+        "AI 분석 대기 사진 없음"
+      );
+
+
+      if (showMessage) {
+
+        alert(
+          "AI 분석 대기 중인 사진이 없습니다."
+        );
+
+      }
+
+
+      return;
+
+    }
+
+
+    console.log(
+      "AI 자동 분석 시작:",
+      pendingItems.length
+    );
+
+
+    let successCount =
+      0;
+
+
+    let failureCount =
+      0;
+
+
+    // =============================================
+    // 반드시 한 장씩 순차 분석
+    // =============================================
 
     for (
       let index = 0;
@@ -473,7 +582,7 @@ async function processPendingAiQueue() {
 
 
       console.log(
-        "AI 분석 중",
+        "AI 분석 중:",
         index + 1,
         "/",
         pendingItems.length,
@@ -481,13 +590,7 @@ async function processPendingAiQueue() {
       );
 
 
-      if (
-        aiAnalyzeButton
-      ) {
-
-        aiAnalyzeButton.disabled =
-          true;
-
+      if (aiAnalyzeButton) {
 
         aiAnalyzeButton.textContent =
           "AI " +
@@ -506,8 +609,11 @@ async function processPendingAiQueue() {
           );
 
 
+        successCount++;
+
+
         console.log(
-          "AI 분석 완료",
+          "AI 분석 완료:",
           item.id,
           result.analysis?.caption
         );
@@ -516,11 +622,11 @@ async function processPendingAiQueue() {
 
       catch (error) {
 
-        // 한 장 실패했다고
-        // 전체 대기열을 중단하지 않음
+        failureCount++;
+
 
         console.error(
-          "사진 AI 분석 실패",
+          "사진 AI 분석 실패:",
           item.id,
           error
         );
@@ -528,18 +634,61 @@ async function processPendingAiQueue() {
       }
 
 
-      // Ollama Free를 위해
-      // 다음 호출까지 약간 간격
+      // Ollama Free:
+      // 다음 요청과 간격을 둠
       if (
         index <
         pendingItems.length - 1
       ) {
 
         await wait(
-          1500
+          3000
         );
 
       }
+
+    }
+
+
+    console.log(
+      "AI 자동 분석 종료",
+      {
+        successCount,
+        failureCount
+      }
+    );
+
+
+    if (showMessage) {
+
+      alert(
+        "AI 분석 완료\n\n" +
+        "성공: " +
+        successCount +
+        "장\n" +
+        "실패: " +
+        failureCount +
+        "장"
+      );
+
+    }
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "AI 대기열 실행 오류",
+      error
+    );
+
+
+    if (showMessage) {
+
+      alert(
+        "AI 분석 대기열 실행에 실패했습니다.\n\n" +
+        error.message
+      );
 
     }
 
@@ -551,9 +700,7 @@ async function processPendingAiQueue() {
       false;
 
 
-    if (
-      aiAnalyzeButton
-    ) {
+    if (aiAnalyzeButton) {
 
       aiAnalyzeButton.disabled =
         false;
@@ -565,15 +712,10 @@ async function processPendingAiQueue() {
     }
 
 
-    // Firestore의 done 상태 다시 반영
+    // 최종 상태 다시 읽기
     await loadMedia();
 
   }
-
-
-  console.log(
-    "AI 자동 분석 대기열 완료"
-  );
 
 }
 
@@ -585,7 +727,9 @@ async function processPendingAiQueue() {
 aiAnalyzeButton.onclick =
   async () => {
 
-    await processPendingAiQueue();
+    await processPendingAiQueue(
+      true
+    );
 
   };
 

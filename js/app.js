@@ -2939,6 +2939,64 @@ function createMediaCard(
 
 }
 
+// =====================================================
+// Gallery Grid
+// =====================================================
+
+function renderGrid(
+  container,
+  items,
+  emptyText
+) {
+
+  container.innerHTML =
+    "";
+
+
+  if (
+    items.length === 0
+  ) {
+
+    const empty =
+      document.createElement(
+        "div"
+      );
+
+
+    empty.className =
+      "empty-message";
+
+
+    empty.textContent =
+      emptyText;
+
+
+    container.appendChild(
+      empty
+    );
+
+
+    return;
+
+  }
+
+
+  items.forEach(
+    (item, index) => {
+
+      container.appendChild(
+        createMediaCard(
+          item,
+          index,
+          items
+        )
+      );
+
+    }
+  );
+
+}
+
 
   // =====================================================
   // Group Renderer

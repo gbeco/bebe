@@ -1359,3 +1359,53 @@ body {
 
   font-size: 12px;
 }
+
+.hidden-media-actions {
+  display: flex;
+
+  gap: 7px;
+
+  flex-shrink: 0;
+}
+
+
+.delete-media-button {
+  padding:
+    9px 12px;
+
+  border:
+    1px solid #e1b8b8;
+
+  border-radius: 10px;
+
+  background: #fff;
+
+  color: #c43b3b;
+
+  cursor: pointer;
+
+  font-size: 12px;
+}
+
+
+.delete-media-button:hover {
+  background: #fff5f5;
+}
+
+
+@media (
+  max-width: 600px
+) {
+
+  .hidden-media-item {
+    align-items:
+      flex-start;
+  }
+
+
+  .hidden-media-actions {
+    flex-direction:
+      column;
+  }
+
+}

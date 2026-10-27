@@ -770,8 +770,9 @@ function getMediaUrl(
     WORKER_BASE +
     "/media/" +
     encodeURIComponent(
-      data.driveFileId
-    )
+      data.id
+    ) +
+    "/original"
   );
 
 }
@@ -781,17 +782,13 @@ function getThumbnailUrl(
   data
 ) {
 
-  const fileId =
-    data.thumbnailDriveFileId ||
-    data.driveFileId;
-
-
   return (
     WORKER_BASE +
     "/media/" +
     encodeURIComponent(
-      fileId
-    )
+      data.id
+    ) +
+    "/thumbnail"
   );
 
 }

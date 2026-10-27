@@ -2094,3 +2094,224 @@ body {
   }
 
 }
+
+/* ==================================
+   Album Search
+================================== */
+
+.album-search {
+  margin:
+    0 0 28px;
+}
+
+
+.album-search-box {
+  position:
+    relative;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  width:
+    100%;
+
+  height:
+    48px;
+
+  padding:
+    0 46px 0 44px;
+
+  border:
+    1px solid
+    #e8e8e8;
+
+  border-radius:
+    16px;
+
+  background:
+    #fff;
+}
+
+
+.album-search-icon {
+  position:
+    absolute;
+
+  left:
+    15px;
+
+  top:
+    50%;
+
+  transform:
+    translateY(-50%);
+
+  font-size:
+    15px;
+
+  opacity:
+    0.55;
+}
+
+
+.album-search-input {
+  width:
+    100%;
+
+  border:
+    0;
+
+  outline:
+    0;
+
+  background:
+    transparent;
+
+  color:
+    #222;
+
+  font-size:
+    15px;
+
+  font-family:
+    inherit;
+}
+
+
+.album-search-input::placeholder {
+  color:
+    #aaa;
+}
+
+
+.album-search-clear {
+  position:
+    absolute;
+
+  right:
+    9px;
+
+  top:
+    50%;
+
+  transform:
+    translateY(-50%);
+
+  width:
+    30px;
+
+  height:
+    30px;
+
+  border:
+    0;
+
+  border-radius:
+    50%;
+
+  background:
+    #f1f1f1;
+
+  color:
+    #777;
+
+  cursor:
+    pointer;
+
+  font-size:
+    12px;
+}
+
+
+.album-search-clear[hidden] {
+  display:
+    none;
+}
+
+
+.album-tag-filters {
+  display:
+    flex;
+
+  gap:
+    7px;
+
+  margin-top:
+    10px;
+
+  padding-bottom:
+    3px;
+
+  overflow-x:
+    auto;
+
+  scrollbar-width:
+    none;
+}
+
+
+.album-tag-filters::-webkit-scrollbar {
+  display:
+    none;
+}
+
+
+.album-tag-button {
+  flex:
+    0 0 auto;
+
+  padding:
+    8px 11px;
+
+  border:
+    1px solid
+    #e6e6e6;
+
+  border-radius:
+    999px;
+
+  background:
+    #fff;
+
+  color:
+    #777;
+
+  cursor:
+    pointer;
+
+  font-size:
+    12px;
+
+  white-space:
+    nowrap;
+}
+
+
+.album-tag-button.active {
+  border-color:
+    #222;
+
+  background:
+    #222;
+
+  color:
+    #fff;
+}
+
+
+.album-search-count {
+  margin-top:
+    9px;
+
+  color:
+    #aaa;
+
+  font-size:
+    12px;
+
+  text-align:
+    right;
+}

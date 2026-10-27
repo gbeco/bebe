@@ -506,6 +506,145 @@ body {
 }
 
 /* ----------------------------------
+   AI Ranking
+----------------------------------- */
+
+.ai-ranking-section {
+  margin:
+    0 0 36px;
+}
+
+
+.best-subsection {
+  margin-bottom:
+    42px;
+}
+
+
+.ai-ranking-section
+.section-heading h3,
+.best-subsection
+.section-heading h3 {
+  margin:
+    4px 0 0;
+
+  font-size:
+    20px;
+
+  letter-spacing:
+    -0.5px;
+}
+
+
+.ai-ranking-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      1fr
+    );
+
+  gap:
+    8px;
+}
+
+
+.ai-ranked-card {
+  position:
+    relative;
+
+  border-radius:
+    14px;
+}
+
+
+.ai-rank-badge,
+.ai-score-badge {
+  position:
+    absolute;
+
+  top:
+    8px;
+
+  z-index:
+    5;
+
+  padding:
+    5px 8px;
+
+  border-radius:
+    999px;
+
+  font-size:
+    11px;
+
+  font-weight:
+    800;
+
+  line-height:
+    1;
+
+  pointer-events:
+    none;
+}
+
+
+.ai-rank-badge {
+  left:
+    8px;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.94
+    );
+
+  color:
+    #222;
+}
+
+
+.ai-score-badge {
+  right:
+    8px;
+
+  background:
+    rgba(
+      0,
+      0,
+      0,
+      0.55
+    );
+
+  color:
+    #fff;
+
+  backdrop-filter:
+    blur(7px);
+}
+
+
+@media (
+  min-width: 700px
+) {
+
+  .ai-ranking-grid {
+    grid-template-columns:
+      repeat(
+        5,
+        1fr
+      );
+
+    gap:
+      10px;
+  }
+
+}
+
+/* ----------------------------------
    Month Preview
 ----------------------------------- */
 

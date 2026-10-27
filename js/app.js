@@ -2704,286 +2704,240 @@ function createMediaCard(
   }
 
 
-  // ---------------------------------------------
+    // ---------------------------------------------
   // 관리자 Favorite 버튼
   // ---------------------------------------------
-  
+
   if (isAdmin) {
-  
+
     const favoriteButton =
       document.createElement(
         "button"
       );
-  
-  
+
+
     favoriteButton.type =
       "button";
-  
-  
+
+
     favoriteButton.className =
       "favorite-button";
-  
-  
+
+
     if (
       data.favorite === true
     ) {
-  
+
       favoriteButton.classList.add(
         "active"
       );
-  
-  
+
+
       favoriteButton.textContent =
         "♥";
-  
+
     }
-  
+
     else {
-  
+
       favoriteButton.textContent =
         "♡";
-  
+
     }
-  
-  
+
+
     favoriteButton.setAttribute(
       "aria-label",
       data.favorite === true
         ? "베스트샷 해제"
         : "베스트샷 등록"
     );
-  
-  
+
+
     favoriteButton.addEventListener(
       "click",
       async (event) => {
-  
-        // 사진 전체화면 열림 방지
+
         event.stopPropagation();
-  
-  
+
+
         await toggleFavorite(
           data,
           favoriteButton
         );
-  
+
       }
     );
-  
-  
+
+
     card.appendChild(
       favoriteButton
     );
-  
+
   }
 
+
   // ---------------------------------------------
-  // 관리자 공개/비공개 버튼
+  // 관리자 공개 / 비공개 버튼
   // ---------------------------------------------
-  
+
   if (
     isAdmin &&
     data.published === true
   ) {
-  
+
     const visibilityButton =
       document.createElement(
         "button"
       );
-  
-  
+
+
     visibilityButton.type =
       "button";
-  
-  
+
+
     visibilityButton.className =
       "visibility-button";
-  
-  
+
+
     visibilityButton.textContent =
       "◉";
-  
-  
+
+
     visibilityButton.title =
       "비공개로 변경";
-  
-  
+
+
     visibilityButton.setAttribute(
       "aria-label",
       "비공개로 변경"
     );
-  
-  
+
+
     visibilityButton.addEventListener(
       "click",
       async (event) => {
-  
+
         event.stopPropagation();
-  
-  
+
+
         const confirmed =
           window.confirm(
             "이 사진을 가족 사진첩에서 숨길까요?"
           );
-  
-  
+
+
         if (!confirmed) {
+
           return;
+
         }
-  
-  
+
+
         visibilityButton.disabled =
           true;
-  
-  
+
+
         await setPublished(
           data,
           false
         );
-  
+
       }
     );
-  
-  
+
+
     card.appendChild(
       visibilityButton
     );
-  
+
   }
-  
-  
-    const info =
-      document.createElement(
-        "div"
-      );
-  
-  
-    info.className =
-      "media-info";
-  
-  
-    const date =
-      document.createElement(
-        "div"
-      );
-  
-  
-    date.className =
-      "media-date";
-  
-  
-    date.textContent =
-      formatTakenDate(
-        data
-      );
-  
-  
-    info.appendChild(
-      date
+
+
+  // ---------------------------------------------
+  // 촬영일 정보
+  // ---------------------------------------------
+
+  const info =
+    document.createElement(
+      "div"
     );
-  
-  
-    card.appendChild(
-      info
+
+
+  info.className =
+    "media-info";
+
+
+  const date =
+    document.createElement(
+      "div"
     );
-  
-  
-    card.addEventListener(
-      "click",
-      () => {
-  
+
+
+  date.className =
+    "media-date";
+
+
+  date.textContent =
+    formatTakenDate(
+      data
+    );
+
+
+  info.appendChild(
+    date
+  );
+
+
+  card.appendChild(
+    info
+  );
+
+
+  // ---------------------------------------------
+  // 카드 클릭 → 전체화면
+  // ---------------------------------------------
+
+  card.addEventListener(
+    "click",
+    () => {
+
+      openViewer(
+        items,
+        index
+      );
+
+    }
+  );
+
+
+  // 키보드 접근
+  card.addEventListener(
+    "keydown",
+    (event) => {
+
+      if (
+        event.key === "Enter" ||
+        event.key === " "
+      ) {
+
+        event.preventDefault();
+
+
         openViewer(
           items,
           index
         );
-  
+
       }
-    );
-  
-  
-    card.addEventListener(
-      "keydown",
-      (event) => {
-  
-        if (
-          event.key ===
-            "Enter" ||
-          event.key ===
-            " "
-        ) {
-  
-          event.preventDefault();
-  
-  
-          openViewer(
-            items,
-            index
-          );
-  
-        }
-  
-      }
-    );
-  
-  
-    return card;
-  
-  }
-  
-  
-  function renderGrid(
-    container,
-    items,
-    emptyText
-  ) {
-  
-    container.innerHTML =
-      "";
-  
-  
-    if (
-      items.length === 0
-    ) {
-  
-      const empty =
-        document.createElement(
-          "div"
-        );
-  
-  
-      empty.className =
-        "empty-message";
-  
-  
-      empty.textContent =
-        emptyText;
-  
-  
-      container.appendChild(
-        empty
-      );
-  
-  
-      return;
-  
+
     }
-  
-  
-    items.forEach(
-      (item, index) => {
-  
-        container.appendChild(
-          createMediaCard(
-            item,
-            index,
-            items
-          )
-        );
-  
-      }
-    );
-  
-  }
+  );
+
+
+  return card;
+
+}
 
 
   // =====================================================

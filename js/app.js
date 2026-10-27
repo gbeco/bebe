@@ -13,6 +13,7 @@ import {
   getDoc,
   updateDoc,
   setDoc,
+  deleteDoc,
   serverTimestamp
 } from
 "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
@@ -2479,6 +2480,138 @@ uploadStartButton.addEventListener(
   }
 );
 
+// =====================================================
+// Permanent Delete
+// =====================================================
+
+async function deleteMediaPermanently(
+  item
+) {
+
+  if (
+    !isAdmin ||
+    !currentUser
+  ) {
+
+    return;
+
+  }
+
+
+  if (
+    item.published === true
+  ) {
+
+    alert(
+      "먼저 비공개로 변경한 뒤 삭제해주세요."
+    );
+
+    return;
+
+  }
+
+
+  const confirmed =
+    window.confirm(
+      "이 사진을 완전히 삭제할까요?\n\n" +
+      "Google Drive의 원본과 썸네일까지 삭제되며 복구할 수 없습니다."
+    );
+
+
+  if (!confirmed) {
+
+    return;
+
+  }
+
+
+  try {
+
+    const idToken =
+      await currentUser
+        .getIdToken();
+
+
+    const response =
+      await fetch(
+        WORKER_BASE +
+        "/admin/media/delete",
+        {
+
+          method:
+            "POST",
+
+          headers: {
+
+            Authorization:
+              "Bearer " +
+              idToken,
+
+            "Content-Type":
+              "application/json"
+
+          },
+
+          body:
+            JSON.stringify({
+
+              driveFileId:
+                item.driveFileId,
+
+              thumbnailDriveFileId:
+                item.thumbnailDriveFileId ||
+                null
+
+            })
+
+        }
+      );
+
+
+    const result =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        result.error ||
+        "Drive 삭제 실패"
+      );
+
+    }
+
+
+    // Drive 삭제 성공 후 Firestore 제거
+    await deleteDoc(
+      doc(
+        db,
+        "media",
+        item.id
+      )
+    );
+
+
+    await loadMedia();
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "완전 삭제 실패",
+      error
+    );
+
+
+    alert(
+      "완전 삭제에 실패했습니다.\n" +
+      error.message
+    );
+
+  }
+
+}
 
 // =====================================================
 // Published
@@ -3342,18 +3475,74 @@ function renderHiddenMedia() {
       );
 
 
+      hiddenMediaList.appendChild(
+        row
+      );
+
+      const deleteButton =
+        document.createElement(
+          "button"
+        );
+      
+      
+      deleteButton.type =
+        "button";
+      
+      
+      deleteButton.className =
+        "delete-media-button";
+      
+      
+      deleteButton.textContent =
+        "완전 삭제";
+      
+      
+      deleteButton.addEventListener(
+        "click",
+        async () => {
+      
+          deleteButton.disabled =
+            true;
+      
+      
+          await deleteMediaPermanently(
+            item
+          );
+      
+      
+          deleteButton.disabled =
+            false;
+      
+        }
+      );
+
       row.appendChild(
         info
       );
-
-
-      row.appendChild(
+      
+      
+      const actions =
+        document.createElement(
+          "div"
+        );
+      
+      
+      actions.className =
+        "hidden-media-actions";
+      
+      
+      actions.appendChild(
         restoreButton
       );
-
-
-      hiddenMediaList.appendChild(
-        row
+      
+      
+      actions.appendChild(
+        deleteButton
+      );
+      
+      
+      row.appendChild(
+        actions
       );
 
     }

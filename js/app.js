@@ -43,6 +43,12 @@ let allMedia = [];
 
 let hiddenMedia = [];
 
+let allSearchText =
+  "";
+
+let activeAiTag =
+  "";
+
 let aiQueueInProgress =
   false;
 
@@ -175,6 +181,29 @@ const bestGallery =
 const aiBestGallery =
   document.getElementById(
     "aiBestGallery"
+  );
+
+const allSearchInput =
+  document.getElementById(
+    "allSearchInput"
+  );
+
+
+const allSearchClear =
+  document.getElementById(
+    "allSearchClear"
+  );
+
+
+const allTagFilters =
+  document.getElementById(
+    "allTagFilters"
+  );
+
+
+const allSearchCount =
+  document.getElementById(
+    "allSearchCount"
   );
 
 const allGroups =
@@ -4507,6 +4536,548 @@ function renderHiddenMedia() {
 }
 
 // =====================================================
+// Album Search
+// =====================================================
+
+function normalizeAlbumSearch(
+  value
+) {
+
+  return String(
+    value || ""
+  )
+    .normalize(
+      "NFKC"
+    )
+    .toLowerCase()
+    .trim();
+
+}
+
+function getAlbumSearchText(
+  item
+) {
+
+  const ai =
+    item.ai || {};
+
+
+  const tags =
+    Array.isArray(
+      ai.tags
+    )
+      ? ai.tags
+      : [];
+
+
+  const mediaLabel =
+    item.mediaType ===
+      "video"
+      ? "영상 비디오"
+      : "사진 포토";
+
+
+  return normalizeAlbumSearch(
+    [
+
+      item.name || "",
+
+      ai.caption || "",
+
+      ai.scene || "",
+
+      ai.expression || "",
+
+      ...tags,
+
+      mediaLabel
+
+    ].join(
+      " "
+    )
+  );
+
+}
+
+function getPopularAiTags(
+  items,
+  limit = 10
+) {
+
+  const counts =
+    new Map();
+
+
+  items.forEach(
+    (item) => {
+
+      const tags =
+        Array.isArray(
+          item.ai?.tags
+        )
+          ? item.ai.tags
+          : [];
+
+
+      tags.forEach(
+        (tag) => {
+
+          const displayTag =
+            String(
+              tag || ""
+            ).trim();
+
+
+          if (!displayTag) {
+
+            return;
+
+          }
+
+
+          const key =
+            normalizeAlbumSearch(
+              displayTag
+            );
+
+
+          const existing =
+            counts.get(
+              key
+            );
+
+
+          if (existing) {
+
+            existing.count +=
+              1;
+
+          }
+
+          else {
+
+            counts.set(
+              key,
+              {
+
+                tag:
+                  displayTag,
+
+                count:
+                  1
+
+              }
+            );
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+
+  return Array.from(
+    counts.values()
+  )
+    .sort(
+      (a, b) =>
+        b.count -
+        a.count
+    )
+    .slice(
+      0,
+      limit
+    );
+
+}
+
+function renderAllTagFilters() {
+
+  if (!allTagFilters) {
+
+    return;
+
+  }
+
+
+  allTagFilters.innerHTML =
+    "";
+
+
+  const popularTags =
+    getPopularAiTags(
+      allMedia,
+      10
+    );
+
+
+  // ---------------------------------------------
+  // 전체 버튼
+  // ---------------------------------------------
+
+  const allButton =
+    document.createElement(
+      "button"
+    );
+
+
+  allButton.type =
+    "button";
+
+
+  allButton.className =
+    "album-tag-button";
+
+
+  allButton.dataset.tag =
+    "";
+
+
+  allButton.textContent =
+    "전체";
+
+
+  if (
+    !activeAiTag
+  ) {
+
+    allButton.classList.add(
+      "active"
+    );
+
+  }
+
+
+  allTagFilters.appendChild(
+    allButton
+  );
+
+
+  // ---------------------------------------------
+  // AI 태그
+  // ---------------------------------------------
+
+  popularTags.forEach(
+    (entry) => {
+
+      const button =
+        document.createElement(
+          "button"
+        );
+
+
+      button.type =
+        "button";
+
+
+      button.className =
+        "album-tag-button";
+
+
+      button.dataset.tag =
+        entry.tag;
+
+
+      button.textContent =
+        "#" +
+        entry.tag;
+
+
+      if (
+        normalizeAlbumSearch(
+          activeAiTag
+        ) ===
+        normalizeAlbumSearch(
+          entry.tag
+        )
+      ) {
+
+        button.classList.add(
+          "active"
+        );
+
+      }
+
+
+      allTagFilters.appendChild(
+        button
+      );
+
+    }
+  );
+
+}
+
+function renderAllFilteredView() {
+
+  const searchText =
+    normalizeAlbumSearch(
+      allSearchText
+    );
+
+
+  const searchTokens =
+    searchText
+      .split(
+        /\s+/
+      )
+      .filter(
+        Boolean
+      );
+
+
+  const normalizedActiveTag =
+    normalizeAlbumSearch(
+      activeAiTag
+    );
+
+
+  const filteredItems =
+    allMedia.filter(
+      (item) => {
+
+        // ---------------------------------------
+        // 텍스트 검색
+        // ---------------------------------------
+
+        const searchableText =
+          getAlbumSearchText(
+            item
+          );
+
+
+        const matchesText =
+          searchTokens.every(
+            (token) =>
+              searchableText.includes(
+                token
+              )
+          );
+
+
+        if (!matchesText) {
+
+          return false;
+
+        }
+
+
+        // ---------------------------------------
+        // 태그 필터
+        // ---------------------------------------
+
+        if (
+          normalizedActiveTag
+        ) {
+
+          const tags =
+            Array.isArray(
+              item.ai?.tags
+            )
+              ? item.ai.tags
+              : [];
+
+
+          const matchesTag =
+            tags.some(
+              (tag) =>
+                normalizeAlbumSearch(
+                  tag
+                ) ===
+                normalizedActiveTag
+            );
+
+
+          if (!matchesTag) {
+
+            return false;
+
+          }
+
+        }
+
+
+        return true;
+
+      }
+    );
+
+
+  // ---------------------------------------------
+  // 태그 버튼
+  // ---------------------------------------------
+
+  renderAllTagFilters();
+
+
+  // ---------------------------------------------
+  // 초기화 버튼
+  // ---------------------------------------------
+
+  allSearchClear.hidden =
+    !allSearchText &&
+    !activeAiTag;
+
+
+  // ---------------------------------------------
+  // 결과 개수
+  // ---------------------------------------------
+
+  if (
+    allSearchText ||
+    activeAiTag
+  ) {
+
+    allSearchCount.textContent =
+      String(
+        filteredItems.length
+      ) +
+      " / " +
+      String(
+        allMedia.length
+      ) +
+      "개";
+
+  }
+
+  else {
+
+    allSearchCount.textContent =
+      String(
+        allMedia.length
+      ) +
+      "개의 기록";
+
+  }
+
+
+  // ---------------------------------------------
+  // 검색 결과 없음
+  // ---------------------------------------------
+
+  if (
+    filteredItems.length ===
+      0
+  ) {
+
+    allGroups.innerHTML =
+      "";
+
+
+    const empty =
+      document.createElement(
+        "div"
+      );
+
+
+    empty.className =
+      "empty-message";
+
+
+    empty.textContent =
+      "검색 결과가 없습니다.";
+
+
+    allGroups.appendChild(
+      empty
+    );
+
+
+    return;
+
+  }
+
+
+  // ---------------------------------------------
+  // 기존처럼 월별 그룹 표시
+  // ---------------------------------------------
+
+  const monthGroupsAll =
+    groupBy(
+      filteredItems,
+      getMonthKey
+    );
+
+
+  renderGroups(
+    allGroups,
+    monthGroupsAll,
+    formatMonthTitle
+  );
+
+}
+
+allSearchInput.addEventListener(
+  "input",
+  (event) => {
+
+    allSearchText =
+      event.target.value;
+
+
+    renderAllFilteredView();
+
+  }
+);
+
+
+allSearchClear.addEventListener(
+  "click",
+  () => {
+
+    allSearchText =
+      "";
+
+
+    activeAiTag =
+      "";
+
+
+    allSearchInput.value =
+      "";
+
+
+    renderAllFilteredView();
+
+
+    allSearchInput.focus();
+
+  }
+);
+
+
+allTagFilters.addEventListener(
+  "click",
+  (event) => {
+
+    const button =
+      event.target.closest(
+        "[data-tag]"
+      );
+
+
+    if (!button) {
+
+      return;
+
+    }
+
+
+    activeAiTag =
+      button.dataset.tag ||
+      "";
+
+
+    renderAllFilteredView();
+
+  }
+);
+
+
+
+// =====================================================
 // AI Recommendation
 // =====================================================
 
@@ -5152,19 +5723,8 @@ function renderViews() {
   // ---------------------------------------------------
   // 전체
   // ---------------------------------------------------
-
-  const monthGroupsAll =
-    groupBy(
-      allMedia,
-      getMonthKey
-    );
-
-
-  renderGroups(
-    allGroups,
-    monthGroupsAll,
-    formatMonthTitle
-  );
+  
+  renderAllFilteredView();
 
 }
 

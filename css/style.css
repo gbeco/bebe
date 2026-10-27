@@ -747,3 +747,139 @@ body {
   }
 
 }
+
+/* ==================================
+   Page Navigation
+================================== */
+
+.page {
+  display: none;
+}
+
+
+.page.active {
+  display: block;
+}
+
+
+.page-heading {
+  margin-bottom: 24px;
+}
+
+
+.page-heading h2 {
+  margin:
+    5px 0 6px;
+
+  font-size: 25px;
+
+  letter-spacing: -0.7px;
+}
+
+
+.section-note {
+  margin: 0;
+
+  font-size: 14px;
+
+  color: #888;
+}
+
+
+.home-block {
+  margin-top: 48px;
+}
+
+
+/* ==================================
+   Date / Month Group
+================================== */
+
+.media-group {
+  margin-bottom: 42px;
+}
+
+
+.group-heading {
+  display: flex;
+
+  align-items: baseline;
+
+  justify-content: space-between;
+
+  margin-bottom: 12px;
+
+  padding-bottom: 8px;
+
+  border-bottom:
+    1px solid #eee;
+}
+
+
+.group-title {
+  margin: 0;
+
+  font-size: 17px;
+
+  font-weight: 700;
+
+  letter-spacing: -0.4px;
+}
+
+
+.group-count {
+  font-size: 12px;
+
+  color: #999;
+}
+
+
+/* ==================================
+   Empty state
+================================== */
+
+.empty-message {
+  grid-column:
+    1 / -1;
+
+  padding:
+    70px 20px;
+
+  text-align: center;
+
+  color: #999;
+
+  font-size: 14px;
+
+  line-height: 1.7;
+}
+
+
+/* ==================================
+   Mobile
+================================== */
+
+@media (
+  max-width: 600px
+) {
+
+  .page-heading {
+    margin-bottom: 18px;
+  }
+
+
+  .page-heading h2 {
+    font-size: 22px;
+  }
+
+
+  .media-group {
+    margin-bottom: 34px;
+  }
+
+
+  .group-title {
+    font-size: 16px;
+  }
+
+}

@@ -3039,7 +3039,7 @@ function createMediaCard(
   
   
         alert(
-          "Gemini 분석 완료\n\n" +
+          "AI 분석 완료\n\n" +
           result.analysis.caption +
           "\n\n" +
           "베스트샷 점수: " +
@@ -3052,13 +3052,13 @@ function createMediaCard(
       catch (error) {
   
         console.error(
-          "Gemini 분석 오류",
+          "AI 분석 오류",
           error
         );
   
   
         alert(
-          "Gemini 분석에 실패했습니다.\n\n" +
+          "AI 분석에 실패했습니다.\n\n" +
           error.message
         );
   

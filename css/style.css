@@ -1233,3 +1233,129 @@ body {
   }
 
 }
+
+/* ==================================
+   Visibility Admin
+================================== */
+
+.visibility-button {
+  position: absolute;
+
+  left: 8px;
+  top: 8px;
+
+  z-index: 6;
+
+  width: 38px;
+  height: 38px;
+
+  border: 0;
+
+  border-radius: 50%;
+
+  background:
+    rgba(0, 0, 0, 0.46);
+
+  color: white;
+
+  font-size: 17px;
+
+  cursor: pointer;
+
+  backdrop-filter:
+    blur(6px);
+}
+
+
+.admin-hidden-section {
+  margin-top: 55px;
+
+  padding-top: 30px;
+
+  border-top:
+    1px solid #ddd;
+}
+
+
+.hidden-section-heading h2 {
+  margin:
+    5px 0 18px;
+
+  font-size: 21px;
+}
+
+
+.hidden-media-list {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 8px;
+}
+
+
+.hidden-media-item {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 16px;
+
+  padding: 14px;
+
+  border-radius: 14px;
+
+  background: white;
+
+  border:
+    1px solid #eee;
+}
+
+
+.hidden-media-info {
+  min-width: 0;
+}
+
+
+.hidden-media-name {
+  overflow: hidden;
+
+  white-space: nowrap;
+
+  text-overflow: ellipsis;
+
+  font-size: 13px;
+
+  font-weight: 600;
+}
+
+
+.hidden-media-date {
+  margin-top: 4px;
+
+  color: #999;
+
+  font-size: 12px;
+}
+
+
+.restore-button {
+  flex-shrink: 0;
+
+  padding:
+    9px 12px;
+
+  border: 0;
+
+  border-radius: 10px;
+
+  background: #222;
+
+  color: white;
+
+  cursor: pointer;
+
+  font-size: 12px;
+}

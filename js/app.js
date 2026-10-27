@@ -3631,7 +3631,6 @@ async function loadMedia() {
       );
   
   }
-    );
 
 
   const snapshot =

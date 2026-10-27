@@ -43,6 +43,9 @@ let allMedia = [];
 
 let hiddenMedia = [];
 
+let aiQueueInProgress =
+  false;
+
 let currentViewerItems = [];
 
 let currentViewerIndex = 0;
@@ -232,202 +235,376 @@ const viewerName =
     "viewerName"
   );
 
-// =====================================================
-// Ollama AI Test
-// 중복 실행 방지
-// =====================================================
 
-let aiAnalyzeInProgress =
-  false;
+async function analyzeMediaItem(
+  item
+) {
 
+  if (
+    !isAdmin ||
+    !currentUser
+  ) {
 
-aiAnalyzeButton.onclick =
-  async () => {
+    throw new Error(
+      "관리자 로그인이 필요합니다."
+    );
 
-    // 이미 실행 중이면 무시
-    if (
-      aiAnalyzeInProgress
-    ) {
-
-      console.log(
-        "AI 분석이 이미 실행 중입니다."
-      );
-
-      return;
-
-    }
+  }
 
 
-    if (
-      !isAdmin ||
-      !currentUser
-    ) {
-
-      return;
-
-    }
+  const idToken =
+    await currentUser
+      .getIdToken();
 
 
-    const target =
-      allMedia.find(
-        (item) =>
-          item.mediaType ===
-            "photo" &&
-          item.thumbnailDriveFileId &&
-          item.ai?.status !==
-            "done"
-      )
-      ||
-      allMedia.find(
-        (item) =>
-          item.mediaType ===
-            "photo" &&
-          item.thumbnailDriveFileId
-      );
+  const response =
+    await fetch(
+      WORKER_BASE +
+      "/admin/ai/analyze",
+      {
+
+        method:
+          "POST",
+
+        headers: {
+
+          Authorization:
+            "Bearer " +
+            idToken,
+
+          "Content-Type":
+            "application/json"
+
+        },
+
+        body:
+          JSON.stringify({
+
+            mediaId:
+              item.id
+
+          })
+
+      }
+    );
 
 
-    if (!target) {
-
-      alert(
-        "AI 분석할 사진이 없습니다."
-      );
-
-      return;
-
-    }
+  let result;
 
 
-    // ---------------------------------------------
-    // 실행 잠금
-    // ---------------------------------------------
+  try {
 
-    aiAnalyzeInProgress =
-      true;
+    result =
+      await response.json();
+
+  }
+
+  catch {
+
+    throw new Error(
+      "AI 서버 응답을 읽지 못했습니다."
+    );
+
+  }
 
 
-    const originalText =
-      aiAnalyzeButton.textContent;
+  if (!response.ok) {
+
+    throw new Error(
+      result.error ||
+      "AI 분석에 실패했습니다."
+    );
+
+  }
 
 
-    aiAnalyzeButton.disabled =
-      true;
+  return result;
+
+}
+
+async function analyzeMediaWithRetry(
+  item
+) {
+
+  const maxAttempts =
+    3;
 
 
-    aiAnalyzeButton.textContent =
-      "…";
-
+  for (
+    let attempt = 1;
+    attempt <= maxAttempts;
+    attempt += 1
+  ) {
 
     try {
 
-      console.log(
-        "AI 분석 시작",
-        target.id
-      );
-
-
-      const idToken =
-        await currentUser
-          .getIdToken();
-
-
-      const response =
-        await fetch(
-          WORKER_BASE +
-          "/admin/ai/analyze",
-          {
-
-            method:
-              "POST",
-
-            headers: {
-
-              Authorization:
-                "Bearer " +
-                idToken,
-
-              "Content-Type":
-                "application/json"
-
-            },
-
-            body:
-              JSON.stringify({
-
-                mediaId:
-                  target.id
-
-              })
-
-          }
-        );
-
-
-      const result =
-        await response.json();
-
-
-      if (!response.ok) {
-
-        throw new Error(
-          result.error ||
-          "AI 분석 실패"
-        );
-
-      }
-
-
-      console.log(
-        "AI 분석 완료",
-        result
-      );
-
-
-      await loadMedia();
-
-
-      alert(
-        "AI 분석 완료\n\n" +
-        result.analysis.caption +
-        "\n\n" +
-        "베스트샷 점수: " +
-        result.analysis.bestShotScore +
-        "점"
+      return await analyzeMediaItem(
+        item
       );
 
     }
 
     catch (error) {
 
-      console.error(
-        "Ollama AI 분석 오류",
-        error
+      const message =
+        String(
+          error.message || ""
+        ).toLowerCase();
+
+
+      const retryable =
+        message.includes(
+          "too many concurrent"
+        ) ||
+        message.includes(
+          "rate"
+        ) ||
+        message.includes(
+          "429"
+        );
+
+
+      if (
+        !retryable ||
+        attempt === maxAttempts
+      ) {
+
+        throw error;
+
+      }
+
+
+      console.log(
+        "AI 재시도 대기",
+        item.id,
+        attempt
       );
 
 
-      alert(
-        "AI 분석에 실패했습니다.\n\n" +
-        error.message
+      // 1차 실패 → 5초
+      // 2차 실패 → 10초
+      await wait(
+        attempt *
+        5000
       );
 
     }
 
-    finally {
+  }
 
-      aiAnalyzeInProgress =
-        false;
+}
 
+async function processPendingAiQueue() {
+
+  if (
+    aiQueueInProgress
+  ) {
+
+    console.log(
+      "AI 대기열이 이미 실행 중입니다."
+    );
+
+    return;
+
+  }
+
+
+  if (
+    !isAdmin ||
+    !currentUser
+  ) {
+
+    return;
+
+  }
+
+
+  // 공개 + 비공개 항목 모두 확인
+  const mediaItems = [
+    ...allMedia,
+    ...hiddenMedia
+  ];
+
+
+  const pendingItems =
+    mediaItems.filter(
+      (item) =>
+        item.mediaType ===
+          "photo" &&
+        item.thumbnailDriveFileId &&
+        item.ai?.status ===
+          "pending"
+    );
+
+
+  if (
+    pendingItems.length === 0
+  ) {
+
+    console.log(
+      "AI 분석 대기 사진 없음"
+    );
+
+    return;
+
+  }
+
+
+  aiQueueInProgress =
+    true;
+
+
+  console.log(
+    "AI 자동 분석 시작",
+    pendingItems.length
+  );
+
+
+  try {
+
+    for (
+      let index = 0;
+      index < pendingItems.length;
+      index += 1
+    ) {
+
+      const item =
+        pendingItems[index];
+
+
+      console.log(
+        "AI 분석 중",
+        index + 1,
+        "/",
+        pendingItems.length,
+        item.id
+      );
+
+
+      if (
+        aiAnalyzeButton
+      ) {
+
+        aiAnalyzeButton.disabled =
+          true;
+
+
+        aiAnalyzeButton.textContent =
+          "AI " +
+          (index + 1) +
+          "/" +
+          pendingItems.length;
+
+      }
+
+
+      try {
+
+        const result =
+          await analyzeMediaWithRetry(
+            item
+          );
+
+
+        console.log(
+          "AI 분석 완료",
+          item.id,
+          result.analysis?.caption
+        );
+
+      }
+
+      catch (error) {
+
+        // 한 장 실패했다고
+        // 전체 대기열을 중단하지 않음
+
+        console.error(
+          "사진 AI 분석 실패",
+          item.id,
+          error
+        );
+
+      }
+
+
+      // Ollama Free를 위해
+      // 다음 호출까지 약간 간격
+      if (
+        index <
+        pendingItems.length - 1
+      ) {
+
+        await wait(
+          1500
+        );
+
+      }
+
+    }
+
+  }
+
+  finally {
+
+    aiQueueInProgress =
+      false;
+
+
+    if (
+      aiAnalyzeButton
+    ) {
 
       aiAnalyzeButton.disabled =
         false;
 
 
       aiAnalyzeButton.textContent =
-        originalText;
+        "AI";
 
     }
 
+
+    // Firestore의 done 상태 다시 반영
+    await loadMedia();
+
+  }
+
+
+  console.log(
+    "AI 자동 분석 대기열 완료"
+  );
+
+}
+
+// =====================================================
+// Ollama AI Test
+// 중복 실행 방지
+// =====================================================
+
+aiAnalyzeButton.onclick =
+  async () => {
+
+    await processPendingAiQueue();
+
   };
 
+function wait(
+  milliseconds
+) {
+
+  return new Promise(
+    (resolve) => {
+
+      setTimeout(
+        resolve,
+        milliseconds
+      );
+
+    }
+  );
+
+}
 
 // =====================================================
 // 날짜
@@ -1008,6 +1185,7 @@ onAuthStateChanged(
       updateAdminUI();
 
       await loadMedia();
+      await processPendingAiQueue();
     }
 
     catch (error) {
@@ -2654,7 +2832,7 @@ uploadStartButton.addEventListener(
       // Firestore 다시 읽어서
       // 갤러리 즉시 갱신
       await loadMedia();
-
+      await processPendingAiQueue();
 
       uploadStartButton.textContent =
         "업로드 완료";

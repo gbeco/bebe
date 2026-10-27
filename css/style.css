@@ -1782,3 +1782,53 @@ body {
   }
 
 }
+
+/* ==================================
+   AI Ranking - Admin buttons
+   AI 배지와 관리자 버튼 겹침 방지
+================================== */
+
+.ai-ranked-card .visibility-button {
+  top: 48px;
+  left: 8px;
+
+  width: 34px;
+  height: 34px;
+
+  font-size: 15px;
+}
+
+
+.ai-ranked-card .favorite-button {
+  top: 48px;
+  right: 8px;
+
+  width: 34px;
+  height: 34px;
+
+  font-size: 20px;
+}
+
+@media (
+  max-width: 600px
+) {
+
+  .ai-ranked-card .visibility-button,
+  .ai-ranked-card .favorite-button {
+    top: 45px;
+
+    width: 32px;
+    height: 32px;
+  }
+
+
+  .ai-ranked-card .visibility-button {
+    font-size: 14px;
+  }
+
+
+  .ai-ranked-card .favorite-button {
+    font-size: 19px;
+  }
+
+}

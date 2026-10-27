@@ -18,23 +18,28 @@ const WORKER_BASE =
   "https://hajin-album-api.madocho.workers.dev";
 
 
-// -----------------------------------------------------
+const TIMEZONE =
+  "Asia/Seoul";
+
+
+// =====================================================
 // State
-// -----------------------------------------------------
+// =====================================================
 
-let mediaItems = [];
+let allMedia = [];
 
-let currentViewerIndex =
-  0;
+let currentViewerItems = [];
+
+let currentViewerIndex = 0;
 
 
-// -----------------------------------------------------
+// =====================================================
 // DOM
-// -----------------------------------------------------
+// =====================================================
 
-const gallery =
-  document.getElementById(
-    "gallery"
+const pages =
+  document.querySelectorAll(
+    ".page"
   );
 
 
@@ -55,6 +60,44 @@ const adminButton =
     "adminButton"
   );
 
+
+const todayGallery =
+  document.getElementById(
+    "todayGallery"
+  );
+
+
+const recentGallery =
+  document.getElementById(
+    "recentGallery"
+  );
+
+
+const monthGroups =
+  document.getElementById(
+    "monthGroups"
+  );
+
+
+const monthPageTitle =
+  document.getElementById(
+    "monthPageTitle"
+  );
+
+
+const bestGallery =
+  document.getElementById(
+    "bestGallery"
+  );
+
+
+const allGroups =
+  document.getElementById(
+    "allGroups"
+  );
+
+
+// Viewer
 
 const mediaViewer =
   document.getElementById(
@@ -104,88 +147,387 @@ const viewerName =
   );
 
 
+// =====================================================
+// 날짜
+// =====================================================
+
+function getTakenDate(
+  data
+) {
+
+  if (
+    data.takenAt &&
+    typeof data.takenAt.toDate ===
+      "function"
+  ) {
+
+    return data.takenAt.toDate();
+
+  }
+
+
+  return null;
+
+}
+
+
+function getTakenMillis(
+  data
+) {
+
+  const date =
+    getTakenDate(
+      data
+    );
+
+
+  return date
+    ? date.getTime()
+    : 0;
+
+}
+
+
 // -----------------------------------------------------
-// Navigation
+// Asia/Seoul 기준 날짜 정보
 // -----------------------------------------------------
 
-function setActiveNav(
-  page
+function getSeoulDateParts(
+  date
 ) {
+
+  const formatter =
+    new Intl.DateTimeFormat(
+      "en-US",
+      {
+        timeZone:
+          TIMEZONE,
+
+        year:
+          "numeric",
+
+        month:
+          "2-digit",
+
+        day:
+          "2-digit"
+      }
+    );
+
+
+  const parts =
+    formatter.formatToParts(
+      date
+    );
+
+
+  const values = {};
+
+
+  parts.forEach(
+    (part) => {
+
+      if (
+        part.type !==
+          "literal"
+      ) {
+
+        values[
+          part.type
+        ] =
+          part.value;
+
+      }
+
+    }
+  );
+
+
+  return {
+
+    year:
+      Number(
+        values.year
+      ),
+
+    month:
+      Number(
+        values.month
+      ),
+
+    day:
+      Number(
+        values.day
+      )
+
+  };
+
+}
+
+
+function getDayKey(
+  data
+) {
+
+  const date =
+    getTakenDate(
+      data
+    );
+
+
+  if (!date) {
+    return "unknown";
+  }
+
+
+  const parts =
+    getSeoulDateParts(
+      date
+    );
+
+
+  return (
+    String(parts.year) +
+    "-" +
+    String(
+      parts.month
+    ).padStart(
+      2,
+      "0"
+    ) +
+    "-" +
+    String(
+      parts.day
+    ).padStart(
+      2,
+      "0"
+    )
+  );
+
+}
+
+
+function getMonthKey(
+  data
+) {
+
+  const date =
+    getTakenDate(
+      data
+    );
+
+
+  if (!date) {
+    return "unknown";
+  }
+
+
+  const parts =
+    getSeoulDateParts(
+      date
+    );
+
+
+  return (
+    String(
+      parts.year
+    ) +
+    "-" +
+    String(
+      parts.month
+    ).padStart(
+      2,
+      "0"
+    )
+  );
+
+}
+
+
+function formatTakenDate(
+  data
+) {
+
+  const date =
+    getTakenDate(
+      data
+    );
+
+
+  if (!date) {
+    return "";
+  }
+
+
+  return new Intl.DateTimeFormat(
+    "ko-KR",
+    {
+      timeZone:
+        TIMEZONE,
+
+      year:
+        "numeric",
+
+      month:
+        "long",
+
+      day:
+        "numeric"
+    }
+  ).format(
+    date
+  );
+
+}
+
+
+function formatDayTitle(
+  data
+) {
+
+  const date =
+    getTakenDate(
+      data
+    );
+
+
+  if (!date) {
+
+    return "날짜 정보 없음";
+
+  }
+
+
+  return new Intl.DateTimeFormat(
+    "ko-KR",
+    {
+      timeZone:
+        TIMEZONE,
+
+      month:
+        "long",
+
+      day:
+        "numeric",
+
+      weekday:
+        "long"
+    }
+  ).format(
+    date
+  );
+
+}
+
+
+function formatMonthTitle(
+  data
+) {
+
+  const date =
+    getTakenDate(
+      data
+    );
+
+
+  if (!date) {
+
+    return "날짜 정보 없음";
+
+  }
+
+
+  return new Intl.DateTimeFormat(
+    "ko-KR",
+    {
+      timeZone:
+        TIMEZONE,
+
+      year:
+        "numeric",
+
+      month:
+        "long"
+    }
+  ).format(
+    date
+  );
+
+}
+
+
+// =====================================================
+// Page Navigation
+// =====================================================
+
+function showPage(
+  pageName,
+  updateHash = true
+) {
+
+  const validPages =
+    [
+      "home",
+      "month",
+      "best",
+      "all"
+    ];
+
+
+  if (
+    !validPages.includes(
+      pageName
+    )
+  ) {
+
+    pageName =
+      "home";
+
+  }
+
+
+  pages.forEach(
+    (page) => {
+
+      page.classList.toggle(
+        "active",
+        page.id ===
+          "page-" +
+          pageName
+      );
+
+    }
+  );
+
 
   navItems.forEach(
     (item) => {
 
       item.classList.toggle(
         "active",
-        item.dataset.page === page
+        item.dataset.page ===
+          pageName
       );
 
     }
   );
 
-}
 
+  if (updateHash) {
 
-function moveToPage(
-  page
-) {
-
-  setActiveNav(
-    page
-  );
-
-
-  let target = null;
-
-
-  if (page === "home") {
-
-    target =
-      document.getElementById(
-        "todaySection"
-      );
+    history.replaceState(
+      null,
+      "",
+      "#" + pageName
+    );
 
   }
 
 
-  if (page === "month") {
-
-    target =
-      document.getElementById(
-        "monthSection"
-      );
-
-  }
-
-
-  if (page === "best") {
-
-    target =
-      document.getElementById(
-        "bestSection"
-      );
-
-  }
-
-
-  if (page === "all") {
-
-    target =
-      document.getElementById(
-        "gallerySection"
-      );
-
-  }
-
-
-  if (target) {
-
-    target.scrollIntoView({
-      behavior: "smooth",
-      block: "start"
-    });
-
-  }
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
 
 }
 
@@ -197,7 +539,7 @@ pageButtons.forEach(
       "click",
       () => {
 
-        moveToPage(
+        showPage(
           button.dataset.page
         );
 
@@ -208,9 +550,9 @@ pageButtons.forEach(
 );
 
 
-// -----------------------------------------------------
-// 관리자 페이지
-// -----------------------------------------------------
+// =====================================================
+// 관리자
+// =====================================================
 
 adminButton.addEventListener(
   "click",
@@ -224,67 +566,9 @@ adminButton.addEventListener(
 );
 
 
-// -----------------------------------------------------
-// 날짜
-// -----------------------------------------------------
-
-function getTakenMillis(
-  data
-) {
-
-  if (
-    data.takenAt &&
-    typeof data.takenAt.toMillis ===
-      "function"
-  ) {
-
-    return data.takenAt.toMillis();
-
-  }
-
-
-  return 0;
-
-}
-
-
-function formatTakenDate(
-  data
-) {
-
-  if (
-    !data.takenAt ||
-    typeof data.takenAt.toDate !==
-      "function"
-  ) {
-
-    return "";
-
-  }
-
-
-  return data.takenAt
-    .toDate()
-    .toLocaleDateString(
-      "ko-KR",
-      {
-        year:
-          "numeric",
-
-        month:
-          "long",
-
-        day:
-          "numeric"
-      }
-    );
-
-}
-
-
-// -----------------------------------------------------
+// =====================================================
 // Media URL
-// -----------------------------------------------------
+// =====================================================
 
 function getMediaUrl(
   data
@@ -299,6 +583,7 @@ function getMediaUrl(
   );
 
 }
+
 
 function getThumbnailUrl(
   data
@@ -320,14 +605,15 @@ function getThumbnailUrl(
 }
 
 
-// -----------------------------------------------------
+// =====================================================
 // Viewer
-// -----------------------------------------------------
+// =====================================================
 
 function renderViewer() {
 
   if (
-    mediaItems.length === 0
+    currentViewerItems.length ===
+      0
   ) {
 
     return;
@@ -336,7 +622,7 @@ function renderViewer() {
 
 
   const data =
-    mediaItems[
+    currentViewerItems[
       currentViewerIndex
     ];
 
@@ -350,10 +636,6 @@ function renderViewer() {
       data
     );
 
-
-  // ---------------------------------------------
-  // 영상
-  // ---------------------------------------------
 
   if (
     data.mediaType ===
@@ -374,10 +656,6 @@ function renderViewer() {
       true;
 
 
-    video.autoplay =
-      false;
-
-
     video.playsInline =
       true;
 
@@ -391,11 +669,6 @@ function renderViewer() {
     );
 
   }
-
-
-  // ---------------------------------------------
-  // 사진
-  // ---------------------------------------------
 
   else {
 
@@ -426,11 +699,12 @@ function renderViewer() {
 
   viewerCounter.textContent =
     String(
-      currentViewerIndex + 1
+      currentViewerIndex +
+      1
     ) +
     " / " +
     String(
-      mediaItems.length
+      currentViewerItems.length
     );
 
 
@@ -444,10 +718,9 @@ function renderViewer() {
     data.name || "";
 
 
-  // 하나밖에 없으면 화살표 숨김
-
   const showArrows =
-    mediaItems.length > 1;
+    currentViewerItems.length >
+      1;
 
 
   viewerPrev.style.display =
@@ -465,8 +738,13 @@ function renderViewer() {
 
 
 function openViewer(
+  items,
   index
 ) {
+
+  currentViewerItems =
+    items;
+
 
   currentViewerIndex =
     index;
@@ -509,8 +787,6 @@ function closeViewer() {
     "";
 
 
-  // 영상이 재생 중일 수 있으므로 제거
-
   viewerContent.innerHTML =
     "";
 
@@ -520,7 +796,8 @@ function closeViewer() {
 function showPrevious() {
 
   if (
-    mediaItems.length === 0
+    currentViewerItems.length ===
+      0
   ) {
 
     return;
@@ -532,9 +809,9 @@ function showPrevious() {
     (
       currentViewerIndex -
       1 +
-      mediaItems.length
+      currentViewerItems.length
     ) %
-    mediaItems.length;
+    currentViewerItems.length;
 
 
   renderViewer();
@@ -545,7 +822,8 @@ function showPrevious() {
 function showNext() {
 
   if (
-    mediaItems.length === 0
+    currentViewerItems.length ===
+      0
   ) {
 
     return;
@@ -558,7 +836,7 @@ function showNext() {
       currentViewerIndex +
       1
     ) %
-    mediaItems.length;
+    currentViewerItems.length;
 
 
   renderViewer();
@@ -588,15 +866,13 @@ viewerNext.addEventListener(
 );
 
 
-// 검은 배경 클릭 시 닫기
-
 mediaViewer.addEventListener(
   "click",
   (event) => {
 
     if (
       event.target ===
-      mediaViewer
+        mediaViewer
     ) {
 
       closeViewer();
@@ -606,8 +882,6 @@ mediaViewer.addEventListener(
   }
 );
 
-
-// 키보드
 
 document.addEventListener(
   "keydown",
@@ -626,7 +900,7 @@ document.addEventListener(
 
     if (
       event.key ===
-      "Escape"
+        "Escape"
     ) {
 
       closeViewer();
@@ -636,7 +910,7 @@ document.addEventListener(
 
     if (
       event.key ===
-      "ArrowLeft"
+        "ArrowLeft"
     ) {
 
       showPrevious();
@@ -646,7 +920,7 @@ document.addEventListener(
 
     if (
       event.key ===
-      "ArrowRight"
+        "ArrowRight"
     ) {
 
       showNext();
@@ -655,6 +929,7 @@ document.addEventListener(
 
   }
 );
+
 
 // -----------------------------------------------------
 // Mobile Swipe
@@ -669,18 +944,23 @@ mediaViewer.addEventListener(
   (event) => {
 
     if (
-      event.touches.length !== 1
+      event.touches.length !==
+        1
     ) {
+
       return;
+
     }
 
 
     touchStartX =
-      event.touches[0].clientX;
+      event.touches[0]
+        .clientX;
 
 
     touchStartY =
-      event.touches[0].clientY;
+      event.touches[0]
+        .clientY;
 
   },
   {
@@ -694,18 +974,23 @@ mediaViewer.addEventListener(
   (event) => {
 
     if (
-      event.changedTouches.length !== 1
+      event.changedTouches.length !==
+        1
     ) {
+
       return;
+
     }
 
 
     const touchEndX =
-      event.changedTouches[0].clientX;
+      event.changedTouches[0]
+        .clientX;
 
 
     const touchEndY =
-      event.changedTouches[0].clientY;
+      event.changedTouches[0]
+        .clientY;
 
 
     const diffX =
@@ -718,25 +1003,26 @@ mediaViewer.addEventListener(
       touchStartY;
 
 
-    // 세로 스크롤보다
-    // 가로 움직임이 큰 경우만 처리
     if (
       Math.abs(diffX) <=
       Math.abs(diffY)
     ) {
+
       return;
+
     }
 
 
-    // 최소 50px 이상 움직여야 스와이프로 판단
     if (
-      Math.abs(diffX) < 50
+      Math.abs(diffX) <
+      50
     ) {
+
       return;
+
     }
 
 
-    // 왼쪽으로 밀기 → 다음
     if (
       diffX < 0
     ) {
@@ -745,8 +1031,6 @@ mediaViewer.addEventListener(
 
     }
 
-
-    // 오른쪽으로 밀기 → 이전
     else {
 
       showPrevious();
@@ -760,13 +1044,14 @@ mediaViewer.addEventListener(
 );
 
 
-// -----------------------------------------------------
-// Gallery Card
-// -----------------------------------------------------
+// =====================================================
+// Gallery
+// =====================================================
 
 function createMediaCard(
   data,
-  index
+  index,
+  items
 ) {
 
   const card =
@@ -779,16 +1064,7 @@ function createMediaCard(
     "media-card";
 
 
-  card.setAttribute(
-    "role",
-    "button"
-  );
-
-
-  card.setAttribute(
-    "tabindex",
-    "0"
-  );
+  card.tabIndex = 0;
 
 
   const mediaUrl =
@@ -796,10 +1072,6 @@ function createMediaCard(
       data
     );
 
-
-  // ---------------------------------------------
-  // 영상
-  // ---------------------------------------------
 
   if (
     data.mediaType ===
@@ -824,11 +1096,11 @@ function createMediaCard(
       "metadata";
 
 
-    video.playsInline =
+    video.muted =
       true;
 
 
-    video.muted =
+    video.playsInline =
       true;
 
 
@@ -837,11 +1109,6 @@ function createMediaCard(
     );
 
   }
-
-
-  // ---------------------------------------------
-  // 사진
-  // ---------------------------------------------
 
   else {
 
@@ -914,15 +1181,12 @@ function createMediaCard(
   );
 
 
-  // ---------------------------------------------
-  // 클릭
-  // ---------------------------------------------
-
   card.addEventListener(
     "click",
     () => {
 
       openViewer(
+        items,
         index
       );
 
@@ -930,20 +1194,22 @@ function createMediaCard(
   );
 
 
-  // Enter 키로도 열기
-
   card.addEventListener(
     "keydown",
     (event) => {
 
       if (
-        event.key === "Enter" ||
-        event.key === " "
+        event.key ===
+          "Enter" ||
+        event.key ===
+          " "
       ) {
 
         event.preventDefault();
 
+
         openViewer(
+          items,
           index
         );
 
@@ -958,9 +1224,445 @@ function createMediaCard(
 }
 
 
-// -----------------------------------------------------
-// 기본 설정
-// -----------------------------------------------------
+function renderGrid(
+  container,
+  items,
+  emptyText
+) {
+
+  container.innerHTML =
+    "";
+
+
+  if (
+    items.length === 0
+  ) {
+
+    const empty =
+      document.createElement(
+        "div"
+      );
+
+
+    empty.className =
+      "empty-message";
+
+
+    empty.textContent =
+      emptyText;
+
+
+    container.appendChild(
+      empty
+    );
+
+
+    return;
+
+  }
+
+
+  items.forEach(
+    (item, index) => {
+
+      container.appendChild(
+        createMediaCard(
+          item,
+          index,
+          items
+        )
+      );
+
+    }
+  );
+
+}
+
+
+// =====================================================
+// Group Renderer
+// =====================================================
+
+function renderGroups(
+  container,
+  groups,
+  titleFormatter
+) {
+
+  container.innerHTML =
+    "";
+
+
+  if (
+    groups.length === 0
+  ) {
+
+    const empty =
+      document.createElement(
+        "div"
+      );
+
+
+    empty.className =
+      "empty-message";
+
+
+    empty.textContent =
+      "등록된 사진이 없습니다.";
+
+
+    container.appendChild(
+      empty
+    );
+
+
+    return;
+
+  }
+
+
+  groups.forEach(
+    (group) => {
+
+      const section =
+        document.createElement(
+          "section"
+        );
+
+
+      section.className =
+        "media-group";
+
+
+      const heading =
+        document.createElement(
+          "div"
+        );
+
+
+      heading.className =
+        "group-heading";
+
+
+      const title =
+        document.createElement(
+          "h3"
+        );
+
+
+      title.className =
+        "group-title";
+
+
+      title.textContent =
+        titleFormatter(
+          group.items[0]
+        );
+
+
+      const count =
+        document.createElement(
+          "span"
+        );
+
+
+      count.className =
+        "group-count";
+
+
+      count.textContent =
+        String(
+          group.items.length
+        ) +
+        "개";
+
+
+      heading.appendChild(
+        title
+      );
+
+
+      heading.appendChild(
+        count
+      );
+
+
+      const grid =
+        document.createElement(
+          "div"
+        );
+
+
+      grid.className =
+        "gallery";
+
+
+      group.items.forEach(
+        (item, index) => {
+
+          grid.appendChild(
+            createMediaCard(
+              item,
+              index,
+              group.items
+            )
+          );
+
+        }
+      );
+
+
+      section.appendChild(
+        heading
+      );
+
+
+      section.appendChild(
+        grid
+      );
+
+
+      container.appendChild(
+        section
+      );
+
+    }
+  );
+
+}
+
+
+// =====================================================
+// Grouping
+// =====================================================
+
+function groupBy(
+  items,
+  keyFunction
+) {
+
+  const map =
+    new Map();
+
+
+  items.forEach(
+    (item) => {
+
+      const key =
+        keyFunction(
+          item
+        );
+
+
+      if (
+        !map.has(key)
+      ) {
+
+        map.set(
+          key,
+          []
+        );
+
+      }
+
+
+      map.get(
+        key
+      ).push(
+        item
+      );
+
+    }
+  );
+
+
+  return Array.from(
+    map.entries()
+  ).map(
+    ([key, groupItems]) => ({
+
+      key,
+
+      items:
+        groupItems
+
+    })
+  );
+
+}
+
+
+// =====================================================
+// View Rendering
+// =====================================================
+
+function renderViews() {
+
+  const nowParts =
+    getSeoulDateParts(
+      new Date()
+    );
+
+
+  // ---------------------------------------------------
+  // 오늘
+  // ---------------------------------------------------
+
+  const todayItems =
+    allMedia.filter(
+      (item) => {
+
+        const date =
+          getTakenDate(
+            item
+          );
+
+
+        if (!date) {
+          return false;
+        }
+
+
+        const parts =
+          getSeoulDateParts(
+            date
+          );
+
+
+        return (
+          parts.year ===
+            nowParts.year &&
+          parts.month ===
+            nowParts.month &&
+          parts.day ===
+            nowParts.day
+        );
+
+      }
+    );
+
+
+  renderGrid(
+    todayGallery,
+    todayItems,
+    "오늘 촬영한 사진이 아직 없습니다."
+  );
+
+
+  // 최근 12개
+
+  renderGrid(
+    recentGallery,
+    allMedia.slice(
+      0,
+      12
+    ),
+    "등록된 사진이 아직 없습니다."
+  );
+
+
+  // ---------------------------------------------------
+  // 이달
+  // ---------------------------------------------------
+
+  const monthItems =
+    allMedia.filter(
+      (item) => {
+
+        const date =
+          getTakenDate(
+            item
+          );
+
+
+        if (!date) {
+          return false;
+        }
+
+
+        const parts =
+          getSeoulDateParts(
+            date
+          );
+
+
+        return (
+          parts.year ===
+            nowParts.year &&
+          parts.month ===
+            nowParts.month
+        );
+
+      }
+    );
+
+
+  monthPageTitle.textContent =
+    String(
+      nowParts.year
+    ) +
+    "년 " +
+    String(
+      nowParts.month
+    ) +
+    "월의 하진";
+
+
+  const dayGroups =
+    groupBy(
+      monthItems,
+      getDayKey
+    );
+
+
+  renderGroups(
+    monthGroups,
+    dayGroups,
+    formatDayTitle
+  );
+
+
+  // ---------------------------------------------------
+  // 베스트
+  // ---------------------------------------------------
+
+  const bestItems =
+    allMedia.filter(
+      (item) =>
+        item.favorite === true
+    );
+
+
+  renderGrid(
+    bestGallery,
+    bestItems,
+    "아직 선택된 베스트샷이 없습니다."
+  );
+
+
+  // ---------------------------------------------------
+  // 전체
+  // ---------------------------------------------------
+
+  const monthGroupsAll =
+    groupBy(
+      allMedia,
+      getMonthKey
+    );
+
+
+  renderGroups(
+    allGroups,
+    monthGroupsAll,
+    formatMonthTitle
+  );
+
+}
+
+
+// =====================================================
+// Firestore Settings
+// =====================================================
 
 async function loadSettings() {
 
@@ -976,7 +1678,9 @@ async function loadSettings() {
       );
 
 
-    if (!snapshot.exists()) {
+    if (
+      !snapshot.exists()
+    ) {
 
       return;
 
@@ -987,21 +1691,23 @@ async function loadSettings() {
       snapshot.data();
 
 
-    if (data.siteTitle) {
+    if (
+      data.siteTitle
+    ) {
 
       document.title =
         data.siteTitle;
 
 
-      const siteTitle =
+      const title =
         document.querySelector(
           ".site-title"
         );
 
 
-      if (siteTitle) {
+      if (title) {
 
-        siteTitle.textContent =
+        title.textContent =
           data.siteTitle;
 
       }
@@ -1022,105 +1728,99 @@ async function loadSettings() {
 }
 
 
-// -----------------------------------------------------
-// 최근 사진
-// -----------------------------------------------------
+// =====================================================
+// Firestore Media
+// =====================================================
 
-async function loadRecentMedia() {
+async function loadMedia() {
+
+  const mediaQuery =
+    query(
+
+      collection(
+        db,
+        "media"
+      ),
+
+      where(
+        "published",
+        "==",
+        true
+      )
+
+    );
+
+
+  const snapshot =
+    await getDocs(
+      mediaQuery
+    );
+
+
+  const items = [];
+
+
+  snapshot.forEach(
+    (documentSnapshot) => {
+
+      items.push({
+
+        id:
+          documentSnapshot.id,
+
+        ...documentSnapshot.data()
+
+      });
+
+    }
+  );
+
+
+  items.sort(
+    (a, b) =>
+      getTakenMillis(b) -
+      getTakenMillis(a)
+  );
+
+
+  allMedia =
+    items;
+
+
+  renderViews();
+
+}
+
+
+// =====================================================
+// Start
+// =====================================================
+
+async function initialize() {
 
   try {
 
-    gallery.innerHTML =
-      '<div class="gallery-loading">사진을 불러오는 중...</div>';
+    await Promise.all([
+
+      loadSettings(),
+
+      loadMedia()
+
+    ]);
 
 
-    const mediaQuery =
-      query(
-
-        collection(
-          db,
-          "media"
-        ),
-
-        where(
-          "published",
-          "==",
-          true
-        )
-
-      );
-
-
-    const snapshot =
-      await getDocs(
-        mediaQuery
-      );
-
-
-    const items = [];
-
-
-    snapshot.forEach(
-      (documentSnapshot) => {
-
-        items.push({
-
-          id:
-            documentSnapshot.id,
-
-          ...documentSnapshot.data()
-
-        });
-
-      }
-    );
-
-
-    // 최신 촬영순
-
-    items.sort(
-      (a, b) =>
-        getTakenMillis(b) -
-        getTakenMillis(a)
-    );
-
-
-    // 현재 메인에서는 최근 12개
-
-    mediaItems =
-      items.slice(
-        0,
-        12
-      );
-
-
-    gallery.innerHTML =
-      "";
-
-
-    if (
-      mediaItems.length === 0
-    ) {
-
-      gallery.innerHTML =
-        '<div class="gallery-loading">아직 등록된 사진이 없습니다.</div>';
-
-      return;
-
-    }
-
-
-    mediaItems.forEach(
-      (item, index) => {
-
-        gallery.appendChild(
-          createMediaCard(
-            item,
-            index
-          )
+    const hash =
+      window.location.hash
+        .replace(
+          "#",
+          ""
         );
 
-      }
+
+    showPage(
+      hash ||
+      "home",
+      false
     );
 
   }
@@ -1128,32 +1828,11 @@ async function loadRecentMedia() {
   catch (error) {
 
     console.error(
-      "갤러리 오류",
+      "초기화 실패",
       error
     );
 
-
-    gallery.innerHTML =
-      '<div class="gallery-loading">사진을 불러오지 못했습니다.</div>';
-
   }
-
-}
-
-
-// -----------------------------------------------------
-// Start
-// -----------------------------------------------------
-
-async function initialize() {
-
-  await Promise.all([
-
-    loadSettings(),
-
-    loadRecentMedia()
-
-  ]);
 
 }
 

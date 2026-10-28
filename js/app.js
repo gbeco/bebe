@@ -3596,7 +3596,7 @@ async function uploadOneFile(
       index,
       mediaType === "video"
         ? "영상 썸네일 생성"
-        : "사진 썸네일 생성"
+        : "사진 썸네일 생성",
       82
     );
 

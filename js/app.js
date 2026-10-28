@@ -2803,6 +2803,341 @@ function createUploadThumbnail(
 }
 
 
+function createVideoThumbnail(
+  file
+) {
+
+  return new Promise(
+    (resolve, reject) => {
+
+      const video =
+        document.createElement(
+          "video"
+        );
+
+
+      const objectUrl =
+        URL.createObjectURL(
+          file
+        );
+
+
+      let finished =
+        false;
+
+
+      function cleanup() {
+
+        URL.revokeObjectURL(
+          objectUrl
+        );
+
+
+        video.removeAttribute(
+          "src"
+        );
+
+
+        video.load();
+
+      }
+
+
+      function fail(
+        message
+      ) {
+
+        if (finished) {
+          return;
+        }
+
+
+        finished =
+          true;
+
+
+        cleanup();
+
+
+        reject(
+          new Error(
+            message
+          )
+        );
+
+      }
+
+
+      function captureFrame() {
+
+        if (finished) {
+          return;
+        }
+
+
+        try {
+
+          const sourceWidth =
+            video.videoWidth;
+
+
+          const sourceHeight =
+            video.videoHeight;
+
+
+          if (
+            !sourceWidth ||
+            !sourceHeight
+          ) {
+
+            fail(
+              "영상 크기를 확인할 수 없습니다."
+            );
+
+            return;
+
+          }
+
+
+          const maxSize =
+            1200;
+
+
+          let width =
+            sourceWidth;
+
+
+          let height =
+            sourceHeight;
+
+
+          if (
+            width > maxSize ||
+            height > maxSize
+          ) {
+
+            const ratio =
+              Math.min(
+                maxSize / width,
+                maxSize / height
+              );
+
+
+            width =
+              Math.round(
+                width * ratio
+              );
+
+
+            height =
+              Math.round(
+                height * ratio
+              );
+
+          }
+
+
+          const canvas =
+            document.createElement(
+              "canvas"
+            );
+
+
+          canvas.width =
+            width;
+
+
+          canvas.height =
+            height;
+
+
+          const context =
+            canvas.getContext(
+              "2d"
+            );
+
+
+          context.drawImage(
+            video,
+            0,
+            0,
+            width,
+            height
+          );
+
+
+          canvas.toBlob(
+            (blob) => {
+
+              if (!blob) {
+
+                fail(
+                  "영상 썸네일 생성에 실패했습니다."
+                );
+
+                return;
+
+              }
+
+
+              finished =
+                true;
+
+
+              cleanup();
+
+
+              resolve(
+                blob
+              );
+
+            },
+            "image/jpeg",
+            0.82
+          );
+
+        }
+
+        catch (error) {
+
+          fail(
+            error.message ||
+            "영상 프레임을 캡처하지 못했습니다."
+          );
+
+        }
+
+      }
+
+
+      video.preload =
+        "metadata";
+
+
+      video.muted =
+        true;
+
+
+      video.playsInline =
+        true;
+
+
+      video.addEventListener(
+        "loadedmetadata",
+        () => {
+
+          const duration =
+            Number(
+              video.duration
+            );
+
+
+          let seekTime =
+            0;
+
+
+          if (
+            Number.isFinite(
+              duration
+            ) &&
+            duration > 0.2
+          ) {
+
+            // 영상의 약 10% 지점.
+            // 너무 뒤로 가지 않도록 최대 1.5초.
+            seekTime =
+              Math.min(
+                duration * 0.1,
+                1.5
+              );
+
+          }
+
+
+          try {
+
+            video.currentTime =
+              seekTime;
+
+          }
+
+          catch {
+
+            fail(
+              "영상 위치를 이동할 수 없습니다."
+            );
+
+          }
+
+        },
+        {
+          once: true
+        }
+      );
+
+
+      video.addEventListener(
+        "seeked",
+        () => {
+
+          // 최신 브라우저에서는 실제 프레임이
+          // 준비된 뒤 캡처
+          if (
+            typeof video.requestVideoFrameCallback ===
+              "function"
+          ) {
+
+            video.requestVideoFrameCallback(
+              () => {
+
+                captureFrame();
+
+              }
+            );
+
+          }
+
+          else {
+
+            // 구형 브라우저 fallback
+            setTimeout(
+              captureFrame,
+              80
+            );
+
+          }
+
+        },
+        {
+          once: true
+        }
+      );
+
+
+      video.addEventListener(
+        "error",
+        () => {
+
+          fail(
+            "브라우저에서 이 영상을 읽을 수 없습니다."
+          );
+
+        },
+        {
+          once: true
+        }
+      );
+
+
+      video.src =
+        objectUrl;
+
+    }
+  );
+
+}
+
+
 // =====================================================
 // Worker upload session
 // =====================================================
@@ -3027,13 +3362,32 @@ async function uploadFileInChunks(
 async function uploadThumbnailFile(
   originalDriveFile,
   originalFile,
+  mediaType,
   idToken
 ) {
 
-  const blob =
-    await createUploadThumbnail(
-      originalFile
-    );
+  let blob;
+
+
+  if (
+    mediaType === "video"
+  ) {
+
+    blob =
+      await createVideoThumbnail(
+        originalFile
+      );
+
+  }
+
+  else {
+
+    blob =
+      await createUploadThumbnail(
+        originalFile
+      );
+
+  }
 
 
   const thumbnail =
@@ -3234,12 +3588,15 @@ async function uploadOneFile(
 
 
   if (
-    mediaType === "photo"
+    mediaType === "photo" ||
+    mediaType === "video"
   ) {
 
     updateUploadRow(
       index,
-      "썸네일 생성",
+      mediaType === "video"
+        ? "영상 썸네일 생성"
+        : "사진 썸네일 생성"
       82
     );
 
@@ -3250,6 +3607,7 @@ async function uploadOneFile(
         await uploadThumbnailFile(
           driveFile,
           file,
+          mediaType,
           idToken
         );
 
@@ -3820,37 +4178,120 @@ function createMediaCard(
     data.mediaType ===
       "video"
   ) {
-
-    const video =
-      document.createElement(
-        "video"
+  
+    // =============================================
+    // 새 영상: 생성된 JPEG 썸네일 사용
+    // =============================================
+  
+    if (
+      data.thumbnailDriveFileId
+    ) {
+  
+      const image =
+        document.createElement(
+          "img"
+        );
+  
+  
+      image.className =
+        "gallery-media";
+  
+  
+      image.src =
+        getThumbnailUrl(
+          data
+        );
+  
+  
+      image.alt =
+        data.name ||
+        "영상";
+  
+  
+      image.loading =
+        "lazy";
+  
+  
+      image.decoding =
+        "async";
+  
+  
+      card.appendChild(
+        image
       );
-
-
-    video.className =
-      "gallery-media";
-
-
-    video.src =
-      mediaUrl;
-
-
-    video.preload =
-      "metadata";
-
-
-    video.muted =
-      true;
-
-
-    video.playsInline =
-      true;
-
-
-    card.appendChild(
-      video
+  
+    }
+  
+    // =============================================
+    // 예전 영상처럼 썸네일이 없는 경우
+    // 원본 영상으로 fallback
+    // =============================================
+  
+    else {
+  
+      const video =
+        document.createElement(
+          "video"
+        );
+  
+  
+      video.className =
+        "gallery-media";
+  
+  
+      video.src =
+        getMediaUrl(
+          data
+        );
+  
+  
+      video.preload =
+        "metadata";
+  
+  
+      video.muted =
+        true;
+  
+  
+      video.playsInline =
+        true;
+  
+  
+      card.appendChild(
+        video
+      );
+  
+    }
+  
+  
+    // =============================================
+    // 영상 표시
+    // =============================================
+  
+    const playBadge =
+      document.createElement(
+        "span"
+      );
+  
+  
+    playBadge.className =
+      "video-play-badge";
+  
+  
+    playBadge.textContent =
+      "▶";
+  
+  
+    playBadge.setAttribute(
+      "aria-hidden",
+      "true"
     );
-
+  
+  
+    card.appendChild(
+      playBadge
+    );
+  
   }
 
   else {

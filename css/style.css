@@ -2315,3 +2315,86 @@ body {
   text-align:
     right;
 }
+
+/* ==================================
+   Video Thumbnail
+================================== */
+
+.video-play-badge {
+  position:
+    absolute;
+
+  left:
+    50%;
+
+  top:
+    50%;
+
+  z-index:
+    4;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    44px;
+
+  height:
+    44px;
+
+  border-radius:
+    50%;
+
+  transform:
+    translate(
+      -50%,
+      -50%
+    );
+
+  background:
+    rgba(
+      0,
+      0,
+      0,
+      0.55
+    );
+
+  color:
+    #fff;
+
+  font-size:
+    16px;
+
+  line-height:
+    1;
+
+  pointer-events:
+    none;
+
+  backdrop-filter:
+    blur(6px);
+}
+
+
+@media (
+  max-width: 600px
+) {
+
+  .video-play-badge {
+    width:
+      38px;
+
+    height:
+      38px;
+
+    font-size:
+      14px;
+  }
+
+}

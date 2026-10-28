@@ -1461,7 +1461,7 @@ function updateAdminUI() {
   ) {
 
     adminButton.textContent =
-      "✓";
+      "🔒";
 
     adminButton.classList.add(
       "admin-active"

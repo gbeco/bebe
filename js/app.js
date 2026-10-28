@@ -1120,6 +1120,70 @@ function getDayKey(
 
 }
 
+function getSeoulDayNumber(
+  date
+) {
+
+  const parts =
+    getSeoulDateParts(
+      date
+    );
+
+
+  return Math.floor(
+    Date.UTC(
+      parts.year,
+      parts.month - 1,
+      parts.day
+    ) /
+    86400000
+  );
+
+}
+
+
+function isWithinRecentDays(
+  item,
+  days = 7
+) {
+
+  const date =
+    getTakenDate(
+      item
+    );
+
+
+  if (!date) {
+
+    return false;
+
+  }
+
+
+  const todayNumber =
+    getSeoulDayNumber(
+      new Date()
+    );
+
+
+  const itemNumber =
+    getSeoulDayNumber(
+      date
+    );
+
+
+  const difference =
+    todayNumber -
+    itemNumber;
+
+
+  return (
+    difference >= 0 &&
+    difference < days
+  );
+
+}
+
 
 function getMonthKey(
   data
@@ -5453,7 +5517,7 @@ function renderTodayAiPick(
   todayAiPickImage.alt =
     selected.ai?.caption ||
     selected.name ||
-    "오늘의 하진";
+    "하진이 근황";
 
 
   todayAiPickScore.textContent =
@@ -5471,7 +5535,7 @@ function renderTodayAiPick(
 
   todayAiPickCaption.textContent =
     selected.ai?.caption ||
-    "오늘의 추천 사진";
+    "최근 하진이의 모습";
 
 
   todayAiPickReason.textContent =
@@ -5572,8 +5636,22 @@ function renderViews() {
       }
     );
 
+// =============================================
+// 하진이 근황
+// 최근 7일 사진 중 AI 추천 대표사진
+// =============================================
+  
+  const recent7DaysItems =
+    allMedia.filter(
+      (item) =>
+        isWithinRecentDays(
+          item,
+          7
+        )
+    );
+  
   renderTodayAiPick(
-    todayItems
+    recent7DaysItems
   );
 
   renderGrid(

@@ -2398,3 +2398,24 @@ body {
   }
 
 }
+
+/* ==================================
+   Duplicate Upload
+================================== */
+
+.upload-file-status.duplicate {
+  color:
+    #9a7b2f;
+
+  font-weight:
+    700;
+}
+
+
+.upload-file-item:has(
+  .upload-file-status.duplicate
+)
+.upload-progress-bar {
+  opacity:
+    0.55;
+}

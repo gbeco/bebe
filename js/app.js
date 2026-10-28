@@ -3510,6 +3510,160 @@ async function registerUploadedMedia(
 
 
 // =====================================================
+// Duplicate Check
+// 파일명 + 촬영일이 같으면 중복
+// =====================================================
+
+function getFirestoreDateMillis(
+  value
+) {
+
+  if (!value) {
+
+    return 0;
+
+  }
+
+
+  if (
+    typeof value.toMillis ===
+      "function"
+  ) {
+
+    return value.toMillis();
+
+  }
+
+
+  if (
+    typeof value.toDate ===
+      "function"
+  ) {
+
+    return value
+      .toDate()
+      .getTime();
+
+  }
+
+
+  if (
+    value instanceof Date
+  ) {
+
+    return value.getTime();
+
+  }
+
+
+  const date =
+    new Date(
+      value
+    );
+
+
+  return Number.isNaN(
+    date.getTime()
+  )
+    ? 0
+    : date.getTime();
+
+}
+
+
+async function findDuplicatePhoto(
+  file,
+  takenAt
+) {
+
+  const sameNameQuery =
+    query(
+
+      collection(
+        db,
+        "media"
+      ),
+
+      where(
+        "name",
+        "==",
+        file.name
+      )
+
+    );
+
+
+  const snapshot =
+    await getDocs(
+      sameNameQuery
+    );
+
+
+  const targetMillis =
+    takenAt.getTime();
+
+
+  let duplicate =
+    null;
+
+
+  snapshot.forEach(
+    (documentSnapshot) => {
+
+      if (duplicate) {
+
+        return;
+
+      }
+
+
+      const data =
+        documentSnapshot.data();
+
+
+      // 사진끼리만 비교
+      if (
+        data.mediaType !==
+          "photo"
+      ) {
+
+        return;
+
+      }
+
+
+      const existingMillis =
+        getFirestoreDateMillis(
+          data.takenAt
+        );
+
+
+      if (
+        existingMillis ===
+          targetMillis
+      ) {
+
+        duplicate = {
+
+          id:
+            documentSnapshot.id,
+
+          ...data
+
+        };
+
+      }
+
+    }
+  );
+
+
+  return duplicate;
+
+}
+
+
+// =====================================================
 // Single File Upload
 // =====================================================
 
@@ -3535,6 +3689,75 @@ async function uploadOneFile(
       "지원하지 않는 파일 형식입니다."
     );
 
+  }
+
+  // =============================================
+  // 사진 중복 확인
+  // =============================================
+  
+  if (
+    mediaType ===
+      "photo"
+  ) {
+  
+    updateUploadRow(
+      index,
+      "중복 확인",
+      1
+    );
+  
+  
+    const takenAt =
+      await getUploadTakenAt(
+        file,
+        mediaType
+      );
+  
+  
+    const duplicate =
+      await findDuplicatePhoto(
+        file,
+        takenAt
+      );
+  
+  
+    if (duplicate) {
+  
+      console.log(
+        "중복 사진 업로드 건너뜀",
+        {
+          fileName:
+            file.name,
+  
+          takenAt:
+            takenAt,
+  
+          existingMediaId:
+            duplicate.id
+        }
+      );
+  
+  
+      updateUploadRow(
+        index,
+        "중복 · 건너뜀",
+        100,
+        "duplicate"
+      );
+  
+  
+      return {
+  
+        duplicate:
+          true,
+  
+        existingMediaId:
+          duplicate.id
+  
+      };
+  
+    }
+  
   }
 
 
@@ -3777,6 +4000,9 @@ uploadStartButton.addEventListener(
       let successCount =
         0;
 
+      let duplicateCount =
+        0;
+
 
       let failureCount =
         0;
@@ -3802,13 +4028,30 @@ uploadStartButton.addEventListener(
 
         try {
 
-          await uploadOneFile(
-            selectedUploadFiles[
-              index
-            ],
-            index,
-            idToken
-          );
+          const uploadResult =
+            await uploadOneFile(
+              selectedUploadFiles[
+                index
+              ],
+              index,
+              idToken
+            );
+          
+          
+          if (
+            uploadResult?.duplicate ===
+              true
+          ) {
+          
+            duplicateCount++;
+          
+          }
+          
+          else {
+          
+            successCount++;
+          
+          }
 
 
           successCount++;
@@ -3839,9 +4082,16 @@ uploadStartButton.addEventListener(
 
 
       uploadSummary.textContent =
-        "완료 " +
+        "업로드 " +
         successCount +
         "개" +
+        (
+          duplicateCount > 0
+            ? " · 중복 " +
+              duplicateCount +
+              "개 제외"
+            : ""
+        ) +
         (
           failureCount > 0
             ? " · 실패 " +

@@ -751,7 +751,7 @@ async function processPendingAiQueue(
         if (showMessage) {
     
           alert(
-            "Firestore에 ai.status = pending인 사진이 없습니다."
+            "AI 입력이 필요한 사진이 없습니다."
           );
     
         }

@@ -3221,7 +3221,7 @@ async function uploadFileInChunks(
 ) {
 
   const chunkSize =
-    8 *
+    32 *
     1024 *
     1024;
 
@@ -4104,10 +4104,33 @@ uploadStartButton.addEventListener(
       // Firestore 다시 읽어서
       // 갤러리 즉시 갱신
       await loadMedia();
-      await processPendingAiQueue();
+
 
       uploadStartButton.textContent =
         "업로드 완료";
+      
+      
+      uploadSummary.textContent +=
+        " · AI 분석 중";
+      
+      
+      // AI 분석은 업로드 완료를 막지 않음
+      processPendingAiQueue()
+        .then(() => {
+      
+          console.log(
+            "업로드 후 AI 분석 완료"
+          );
+      
+        })
+        .catch((error) => {
+      
+          console.error(
+            "업로드 후 AI 분석 실패",
+            error
+          );
+      
+        });
 
     }
 

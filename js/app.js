@@ -6773,8 +6773,8 @@ function renderViews() {
 
   renderGroups(
     allGroups,
-    monthGroupsAll,
-    formatMonthTitle
+    dayGroups,
+    formatDayTitle
   );
 
 

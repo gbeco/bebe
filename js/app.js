@@ -6772,7 +6772,7 @@ function renderViews() {
 
 
   renderGroups(
-    allgorups,
+    allGroups,
     monthGroupsAll,
     formatMonthTitle
   );

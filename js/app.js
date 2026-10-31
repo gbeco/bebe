@@ -5048,6 +5048,303 @@ function renderGrid(
 
 
 // =====================================================
+// All Page - 월별 단계형 렌더링
+// 처음 3장, 이후 12장씩 추가
+// =====================================================
+
+function renderPagedMonthGroups(
+  container,
+  groups,
+  titleFormatter
+) {
+
+  container.innerHTML =
+    "";
+
+
+  if (
+    groups.length === 0
+  ) {
+
+    const empty =
+      document.createElement(
+        "div"
+      );
+
+
+    empty.className =
+      "empty-message";
+
+
+    empty.textContent =
+      "등록된 사진이 없습니다.";
+
+
+    container.appendChild(
+      empty
+    );
+
+
+    return;
+
+  }
+
+
+  groups.forEach(
+    (group) => {
+
+      const section =
+        document.createElement(
+          "section"
+        );
+
+
+      section.className =
+        "media-group all-month-group";
+
+
+      // =============================================
+      // 제목
+      // =============================================
+
+      const heading =
+        document.createElement(
+          "div"
+        );
+
+
+      heading.className =
+        "group-heading";
+
+
+      const title =
+        document.createElement(
+          "h3"
+        );
+
+
+      title.className =
+        "group-title";
+
+
+      title.textContent =
+        titleFormatter(
+          group.items[0]
+        );
+
+
+      const count =
+        document.createElement(
+          "span"
+        );
+
+
+      count.className =
+        "group-count";
+
+
+      count.textContent =
+        String(
+          group.items.length
+        ) +
+        "개";
+
+
+      heading.appendChild(
+        title
+      );
+
+
+      heading.appendChild(
+        count
+      );
+
+
+      // =============================================
+      // 갤러리
+      // =============================================
+
+      const grid =
+        document.createElement(
+          "div"
+        );
+
+
+      grid.className =
+        "gallery";
+
+
+      // 처음에는 3장
+      let visibleCount =
+        Math.min(
+          3,
+          group.items.length
+        );
+
+
+      function renderVisibleItems() {
+
+        grid.innerHTML =
+          "";
+
+
+        const visibleItems =
+          group.items.slice(
+            0,
+            visibleCount
+          );
+
+
+        visibleItems.forEach(
+          (item, index) => {
+
+            grid.appendChild(
+              createMediaCard(
+                item,
+                index,
+                group.items
+              )
+            );
+
+          }
+        );
+
+
+        updateMoreButton();
+
+      }
+
+
+      // =============================================
+      // 더보기 영역
+      // =============================================
+
+      const moreArea =
+        document.createElement(
+          "div"
+        );
+
+
+      moreArea.className =
+        "month-more-area";
+
+
+      const moreButton =
+        document.createElement(
+          "button"
+        );
+
+
+      moreButton.type =
+        "button";
+
+
+      moreButton.className =
+        "month-more-button";
+
+
+      function updateMoreButton() {
+
+        const remaining =
+          group.items.length -
+          visibleCount;
+
+
+        if (
+          remaining <= 0
+        ) {
+
+          moreArea.hidden =
+            true;
+
+          return;
+
+        }
+
+
+        moreArea.hidden =
+          false;
+
+
+        const nextCount =
+          Math.min(
+            12,
+            remaining
+          );
+
+
+        moreButton.textContent =
+          "더보기 " +
+          nextCount +
+          "장";
+
+
+        moreButton.setAttribute(
+          "aria-label",
+          title.textContent +
+          " 사진 " +
+          nextCount +
+          "장 더 보기"
+        );
+
+      }
+
+
+      moreButton.addEventListener(
+        "click",
+        () => {
+
+          visibleCount =
+            Math.min(
+              visibleCount + 12,
+              group.items.length
+            );
+
+
+          renderVisibleItems();
+
+        }
+      );
+
+
+      moreArea.appendChild(
+        moreButton
+      );
+
+
+      // =============================================
+      // 조립
+      // =============================================
+
+      section.appendChild(
+        heading
+      );
+
+
+      section.appendChild(
+        grid
+      );
+
+
+      section.appendChild(
+        moreArea
+      );
+
+
+      container.appendChild(
+        section
+      );
+
+
+      renderVisibleItems();
+
+    }
+  );
+
+}
+
+
+// =====================================================
 // Grouping
 // =====================================================
 
@@ -5779,7 +6076,7 @@ function renderAllFilteredView() {
     );
 
 
-  renderGroups(
+  renderPagedMonthGroups(
     allGroups,
     monthGroupsAll,
     formatMonthTitle
@@ -6475,9 +6772,9 @@ function renderViews() {
 
 
   renderGroups(
-    monthGroups,
-    dayGroups,
-    formatDayTitle
+    allgorups,
+    monthGroupsAll,
+    formatMonthTitle
   );
 
 

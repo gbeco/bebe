@@ -2519,44 +2519,58 @@ body {
 
 
 .similar-group-badge {
-  position: absolute;
+  position: absolute !important;
 
-  top: 10px;
-  left: 10px;
+  right: 10px !important;
+  bottom: 10px !important;
 
-  z-index: 4;
+  top: auto !important;
+  left: auto !important;
 
-  display: flex;
+  z-index: 20 !important;
+
+  display: inline-flex !important;
   align-items: center;
+  justify-content: center;
 
   min-height: 28px;
 
   padding:
-    5px 10px;
+    6px 10px;
 
   border-radius:
     999px;
 
   background:
-    rgba(0, 0, 0, 0.68);
+    rgba(0, 0, 0, 0.72) !important;
 
   color:
-    #fff;
+    #ffffff !important;
 
   font-size:
-    12px;
+    12px !important;
 
   font-weight:
-    700;
+    700 !important;
 
   line-height:
-    1;
+    1 !important;
 
-  letter-spacing:
-    -0.2px;
+  white-space:
+    nowrap;
+
+  visibility:
+    visible !important;
+
+  opacity:
+    1 !important;
 
   pointer-events:
     none;
+
+  box-shadow:
+    0 2px 8px
+    rgba(0, 0, 0, 0.24);
 
   backdrop-filter:
     blur(6px);
@@ -2571,16 +2585,19 @@ body {
 ) {
 
   .similar-group-badge {
-    top: 7px;
-    left: 7px;
+    right: 7px !important;
+    bottom: 7px !important;
+
+    top: auto !important;
+    left: auto !important;
 
     min-height: 25px;
 
     padding:
-      4px 8px;
+      5px 8px;
 
     font-size:
-      11px;
+      11px !important;
   }
 
 }

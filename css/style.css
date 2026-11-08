@@ -2502,3 +2502,85 @@ body {
   margin-bottom:
     34px;
 }
+
+
+/* ==================================
+   Similar Photo Group
+================================== */
+
+.media-card {
+  position: relative;
+}
+
+
+.similar-group-card {
+  position: relative;
+}
+
+
+.similar-group-badge {
+  position: absolute;
+
+  top: 10px;
+  left: 10px;
+
+  z-index: 4;
+
+  display: flex;
+  align-items: center;
+
+  min-height: 28px;
+
+  padding:
+    5px 10px;
+
+  border-radius:
+    999px;
+
+  background:
+    rgba(0, 0, 0, 0.68);
+
+  color:
+    #fff;
+
+  font-size:
+    12px;
+
+  font-weight:
+    700;
+
+  line-height:
+    1;
+
+  letter-spacing:
+    -0.2px;
+
+  pointer-events:
+    none;
+
+  backdrop-filter:
+    blur(6px);
+
+  -webkit-backdrop-filter:
+    blur(6px);
+}
+
+
+@media (
+  max-width: 600px
+) {
+
+  .similar-group-badge {
+    top: 7px;
+    left: 7px;
+
+    min-height: 25px;
+
+    padding:
+      4px 8px;
+
+    font-size:
+      11px;
+  }
+
+}

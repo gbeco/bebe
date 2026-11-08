@@ -6198,6 +6198,395 @@ function createMediaCard(
 }
 
 // =====================================================
+// Similar Photo UI
+// =====================================================
+
+function buildSimilarityDisplayEntries(
+  items
+) {
+
+  const groupMap =
+    new Map();
+
+
+  // 그룹별 사진 수집
+  items.forEach(
+    (item) => {
+
+      const groupId =
+        item.similarGroupId;
+
+
+      if (!groupId) {
+        return;
+      }
+
+
+      if (
+        !groupMap.has(
+          groupId
+        )
+      ) {
+
+        groupMap.set(
+          groupId,
+          []
+        );
+
+      }
+
+
+      groupMap
+        .get(
+          groupId
+        )
+        .push(
+          item
+        );
+
+    }
+  );
+
+
+  const processedGroups =
+    new Set();
+
+
+  const entries =
+    [];
+
+
+  items.forEach(
+    (item) => {
+
+      const groupId =
+        item.similarGroupId;
+
+
+      // 일반 사진
+      if (!groupId) {
+
+        entries.push({
+
+          item,
+
+          groupItems:
+            null,
+
+          groupCount:
+            1
+
+        });
+
+
+        return;
+
+      }
+
+
+      // 같은 그룹은 한 번만 표시
+      if (
+        processedGroups.has(
+          groupId
+        )
+      ) {
+
+        return;
+
+      }
+
+
+      processedGroups.add(
+        groupId
+      );
+
+
+      const groupItems =
+        [
+          ...(
+            groupMap.get(
+              groupId
+            ) || []
+          )
+        ]
+          .sort(
+            (a, b) =>
+              getTakenMillis(a) -
+              getTakenMillis(b)
+          );
+
+
+      // 현재 화면에 그룹 사진이
+      // 한 장밖에 없으면 일반 사진처럼 처리
+      if (
+        groupItems.length < 2
+      ) {
+
+        entries.push({
+
+          item,
+
+          groupItems:
+            null,
+
+          groupCount:
+            1
+
+        });
+
+
+        return;
+
+      }
+
+
+      // Firestore에 저장된 대표사진 우선
+      let representative =
+        groupItems.find(
+          (groupItem) =>
+            groupItem
+              .similarRepresentative ===
+            true
+        );
+
+
+      // 대표사진이 현재 필터에 없다면
+      // 기존 대표 선정 함수 사용
+      if (!representative) {
+
+        representative =
+          chooseSimilarityRepresentative(
+            groupItems
+          );
+
+      }
+
+
+      if (!representative) {
+
+        representative =
+          groupItems[0];
+
+      }
+
+
+      entries.push({
+
+        item:
+          representative,
+
+        groupItems,
+
+        groupCount:
+          groupItems.length
+
+      });
+
+    }
+  );
+
+
+  return entries;
+
+}
+
+
+// -----------------------------------------------------
+// 그룹 배지가 포함된 카드
+// -----------------------------------------------------
+
+function createSimilarityDisplayCard(
+  entry,
+  normalBrowseItems,
+  normalIndex
+) {
+
+  let card;
+
+
+  // 유사사진 그룹
+  if (
+    entry.groupItems &&
+    entry.groupItems.length > 1
+  ) {
+
+    const representativeIndex =
+      entry.groupItems.findIndex(
+        (item) =>
+          item.id ===
+          entry.item.id
+      );
+
+
+    card =
+      createMediaCard(
+        entry.item,
+        representativeIndex >= 0
+          ? representativeIndex
+          : 0,
+        entry.groupItems
+      );
+
+
+    card.classList.add(
+      "similar-group-card"
+    );
+
+
+    const badge =
+      document.createElement(
+        "div"
+      );
+
+
+    badge.className =
+      "similar-group-badge";
+
+
+    badge.textContent =
+      "▣ " +
+      String(
+        entry.groupCount
+      ) +
+      "장";
+
+
+    badge.setAttribute(
+      "aria-hidden",
+      "true"
+    );
+
+
+    card.appendChild(
+      badge
+    );
+
+  }
+
+
+  // 일반 사진
+  else {
+
+    card =
+      createMediaCard(
+        entry.item,
+        normalIndex,
+        normalBrowseItems
+      );
+
+  }
+
+
+  return card;
+
+}
+
+
+// -----------------------------------------------------
+// 그룹 사진을 접어서 grid에 추가
+// -----------------------------------------------------
+
+function appendSimilarityCards(
+  container,
+  items,
+  limit = null
+) {
+
+  const entries =
+    buildSimilarityDisplayEntries(
+      items
+    );
+
+
+  const visibleEntries =
+    limit === null
+      ? entries
+      : entries.slice(
+          0,
+          limit
+        );
+
+
+  // 일반 사진 Viewer에서 넘겨볼 목록
+  const browseItems =
+    visibleEntries.map(
+      (entry) =>
+        entry.item
+    );
+
+
+  visibleEntries.forEach(
+    (entry, index) => {
+
+      container.appendChild(
+        createSimilarityDisplayCard(
+          entry,
+          browseItems,
+          index
+        )
+      );
+
+    }
+  );
+
+
+  return entries;
+
+}
+
+
+// -----------------------------------------------------
+// 일반 Grid의 유사사진 버전
+// -----------------------------------------------------
+
+function renderSimilarityGrid(
+  container,
+  items,
+  emptyText,
+  limit = null
+) {
+
+  container.innerHTML =
+    "";
+
+
+  if (
+    items.length === 0
+  ) {
+
+    const empty =
+      document.createElement(
+        "div"
+      );
+
+
+    empty.className =
+      "empty-message";
+
+
+    empty.textContent =
+      emptyText;
+
+
+    container.appendChild(
+      empty
+    );
+
+
+    return;
+
+  }
+
+
+  appendSimilarityCards(
+    container,
+    items,
+    limit
+  );
+
+}
+
+// =====================================================
 // Gallery Grid
 // =====================================================
 
@@ -6261,10 +6650,11 @@ function renderGrid(
   // =====================================================
   
   function renderGroups(
-    container,
-    groups,
-    titleFormatter
-  ) {
+      container,
+      groups,
+      titleFormatter,
+      collapseSimilar = false
+    ) {
   
     container.innerHTML =
       "";
@@ -6374,19 +6764,34 @@ function renderGrid(
           "gallery";
   
   
-        group.items.forEach(
-          (item, index) => {
-  
-            grid.appendChild(
-              createMediaCard(
-                item,
-                index,
-                group.items
-              )
-            );
-  
-          }
-        );
+        if (
+          collapseSimilar
+        ) {
+
+          appendSimilarityCards(
+            grid,
+            group.items
+          );
+
+        }
+
+        else {
+
+          group.items.forEach(
+            (item, index) => {
+
+              grid.appendChild(
+                createMediaCard(
+                  item,
+                  index,
+                  group.items
+                )
+              );
+
+            }
+          );
+
+        }
   
   
         section.appendChild(
@@ -6535,12 +6940,16 @@ function renderPagedMonthGroups(
       grid.className =
         "gallery";
 
+      const displayEntries =
+          buildSimilarityDisplayEntries(
+            group.items
+          );
 
       // 처음에는 3장
       let visibleCount =
         Math.min(
           3,
-          group.items.length
+          displayEntries.length
         );
 
 
@@ -6550,21 +6959,28 @@ function renderPagedMonthGroups(
           "";
 
 
-        const visibleItems =
-          group.items.slice(
+        const visibleEntries =
+          displayEntries.slice(
             0,
             visibleCount
           );
 
 
-        visibleItems.forEach(
-          (item, index) => {
+        const browseItems =
+          visibleEntries.map(
+            (entry) =>
+              entry.item
+          );
+
+
+        visibleEntries.forEach(
+          (entry, index) => {
 
             grid.appendChild(
-              createMediaCard(
-                item,
-                index,
-                group.items
+              createSimilarityDisplayCard(
+                entry,
+                browseItems,
+                index
               )
             );
 
@@ -6608,7 +7024,7 @@ function renderPagedMonthGroups(
       function updateMoreButton() {
 
         const remaining =
-          group.items.length -
+          displayEntries.length -
           visibleCount;
 
 
@@ -6659,7 +7075,7 @@ function renderPagedMonthGroups(
           visibleCount =
             Math.min(
               visibleCount + 12,
-              group.items.length
+              displayEntries.length
             );
 
 
@@ -8027,7 +8443,7 @@ function renderViews() {
     recent7DaysItems
   );
 
-  renderGrid(
+  renderSimilarityGrid(
     todayGallery,
     todayItems,
     "오늘 촬영한 사진이 아직 없습니다."
@@ -8036,7 +8452,7 @@ function renderViews() {
 
   // 최근 12개
 
-  renderGrid(
+  renderSimilarityGrid(
     recentGallery,
     allMedia.slice(
       0,
@@ -8136,7 +8552,8 @@ function renderViews() {
   renderGroups(
     allGroups,
     dayGroups,
-    formatDayTitle
+    formatDayTitle,
+    true
   );
 
 

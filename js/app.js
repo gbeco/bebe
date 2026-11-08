@@ -8799,6 +8799,67 @@ async function loadMedia() {
         return groupedItems;
 
       };
+
+  window.debugSimilarityRender =
+      () => {
+
+        const entries =
+          buildSimilarityDisplayEntries(
+            allMedia
+          );
+
+
+        const groupedEntries =
+          entries.filter(
+            (entry) =>
+              entry.groupItems &&
+              entry.groupItems.length > 1
+          );
+
+
+        console.log(
+          "원본 사진/영상:",
+          allMedia.length
+        );
+
+
+        console.log(
+          "그룹 적용 후 카드:",
+          entries.length
+        );
+
+
+        console.log(
+          "유사사진 그룹 카드:",
+          groupedEntries.length
+        );
+
+
+        console.table(
+          groupedEntries.map(
+            (entry) => ({
+
+              대표사진:
+                entry.item.name,
+
+              그룹ID:
+                entry.item.similarGroupId,
+
+              사진수:
+                entry.groupItems.length,
+
+              대표:
+                entry.item
+                  .similarRepresentative
+
+            })
+          )
+        );
+
+
+        return groupedEntries;
+
+      };
   
   
   hiddenMedia =

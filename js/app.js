@@ -1663,8 +1663,8 @@ function getThumbnailUrl(
 // Firestore 저장 없음 / 테스트 전용
 // =====================================================
 
-const SIMILARITY_TEST_TIME_SECONDS = 15;
-const SIMILARITY_TEST_HASH_DISTANCE = 10;
+const SIMILARITY_TEST_TIME_SECONDS = 20;
+const SIMILARITY_TEST_HASH_DISTANCE = 12;
 
 
 // -----------------------------------------------------
@@ -1935,86 +1935,6 @@ function getHashDistance(
 
 
 // -----------------------------------------------------
-// Union Find
-// 유사한 사진끼리 그룹 연결
-// -----------------------------------------------------
-
-function createSimilarityUnionFind(
-  size
-) {
-
-  const parent =
-    Array.from(
-      {
-        length:
-          size
-      },
-      (_, index) =>
-        index
-    );
-
-
-  function find(index) {
-
-    if (
-      parent[index] !==
-        index
-    ) {
-
-      parent[index] =
-        find(
-          parent[index]
-        );
-
-    }
-
-
-    return parent[index];
-
-  }
-
-
-  function union(
-    first,
-    second
-  ) {
-
-    const firstRoot =
-      find(
-        first
-      );
-
-
-    const secondRoot =
-      find(
-        second
-      );
-
-
-    if (
-      firstRoot !==
-        secondRoot
-    ) {
-
-      parent[
-        secondRoot
-      ] =
-        firstRoot;
-
-    }
-
-  }
-
-
-  return {
-    find,
-    union
-  };
-
-}
-
-
-// -----------------------------------------------------
 // 테스트 실행
 // -----------------------------------------------------
 
@@ -2276,31 +2196,78 @@ async function testSimilarPhotoGroups(
 
   }
 
+// =============================================
+// 안전한 유사 그룹 만들기
+//
+// 기준:
+// 1. 그룹 첫 사진과 20초 이내
+// 2. 그룹 첫 사진과 dHash 거리 12 이하
+//
+// 중간 사진을 통한 연쇄 확장을 허용하지 않음
+// =============================================
 
-  // =============================================
-  // 시간 + 이미지 유사도 동시 비교
-  // =============================================
+const groups =
+  [];
 
-  const unionFind =
-    createSimilarityUnionFind(
-      photos.length
+
+const usedIndexes =
+  new Set();
+
+
+for (
+  let first = 0;
+  first <
+    photos.length;
+  first += 1
+) {
+
+  if (
+    usedIndexes.has(
+      first
+    ) ||
+    !hashes.has(
+      first
+    )
+  ) {
+
+    continue;
+
+  }
+
+
+  const anchorItem =
+    photos[first];
+
+
+  const anchorTime =
+    getTakenMillis(
+      anchorItem
     );
 
 
-  const matchedIndexes =
-    new Set();
+  const anchorHash =
+    hashes.get(
+      first
+    );
+
+
+  const groupIndexes =
+    [
+      first
+    ];
 
 
   for (
-    let first = 0;
-    first <
+    let second =
+      first + 1;
+    second <
       photos.length;
-    first += 1
+    second += 1
   ) {
 
     if (
-      !hashes.has(
-        first
+      usedIndexes.has(
+        second
       )
     ) {
 
@@ -2309,158 +2276,112 @@ async function testSimilarPhotoGroups(
     }
 
 
-    const firstTime =
+    const secondTime =
       getTakenMillis(
-        photos[first]
+        photos[second]
       );
 
 
-    for (
-      let second =
-        first + 1;
-      second <
-        photos.length;
-      second += 1
+    const timeDifference =
+      secondTime -
+      anchorTime;
+
+
+    // 그룹의 첫 사진으로부터
+    // 20초를 넘으면 여기서 종료
+    if (
+      timeDifference >
+      timeWindow
     ) {
 
-      const secondTime =
-        getTakenMillis(
-          photos[second]
-        );
+      break;
+
+    }
 
 
-      const timeDifference =
-        secondTime -
-        firstTime;
+    if (
+      !hashes.has(
+        second
+      )
+    ) {
+
+      continue;
+
+    }
 
 
-      if (
-        timeDifference >
-        timeWindow
-      ) {
-
-        break;
-
-      }
-
-
-      if (
-        !hashes.has(
+    const hashDistance =
+      getHashDistance(
+        anchorHash,
+        hashes.get(
           second
         )
-      ) {
-
-        continue;
-
-      }
+      );
 
 
-      const hashDistance =
-        getHashDistance(
-          hashes.get(
-            first
-          ),
-          hashes.get(
-            second
-          )
-        );
+    // 반드시 첫 사진과 직접 유사해야 함
+    if (
+      hashDistance <=
+      maxHashDistance
+    ) {
 
-
-      if (
-        hashDistance <=
-        maxHashDistance
-      ) {
-
-        unionFind.union(
-          first,
-          second
-        );
-
-
-        matchedIndexes.add(
-          first
-        );
-
-
-        matchedIndexes.add(
-          second
-        );
-
-      }
+      groupIndexes.push(
+        second
+      );
 
     }
 
   }
 
 
-  // =============================================
-  // 실제 그룹 만들기
-  // =============================================
+  // 2장 이상일 때만 유사 그룹
+  if (
+    groupIndexes.length >= 2
+  ) {
 
-  const groupMap =
-    new Map();
+    groupIndexes.forEach(
+      (index) => {
 
-
-  matchedIndexes.forEach(
-    (index) => {
-
-      const root =
-        unionFind.find(
+        usedIndexes.add(
           index
         );
 
-
-      if (
-        !groupMap.has(
-          root
-        )
-      ) {
-
-        groupMap.set(
-          root,
-          []
-        );
-
       }
+    );
 
 
-      groupMap
-        .get(
-          root
+    const group =
+      groupIndexes
+        .map(
+          (index) =>
+            photos[index]
         )
-        .push(
-          photos[index]
+        .sort(
+          (a, b) =>
+            getTakenMillis(a) -
+            getTakenMillis(b)
         );
 
-    }
-  );
+
+    groups.push(
+      group
+    );
+
+  }
+
+}
 
 
-  const groups =
-    Array.from(
-      groupMap.values()
+// 최신 그룹부터 표시
+groups.sort(
+  (a, b) =>
+    getTakenMillis(
+      b[0]
+    ) -
+    getTakenMillis(
+      a[0]
     )
-      .filter(
-        (group) =>
-          group.length >= 2
-      )
-      .map(
-        (group) =>
-          group.sort(
-            (a, b) =>
-              getTakenMillis(a) -
-              getTakenMillis(b)
-          )
-      )
-      .sort(
-        (a, b) =>
-          getTakenMillis(
-            b[0]
-          ) -
-          getTakenMillis(
-            a[0]
-          )
-      );
+);
 
 
   // =============================================

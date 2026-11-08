@@ -2554,6 +2554,219 @@ async function testSimilarPhotoGroups(
 
 }
 
+// =====================================================
+// Similar Group Representative Test
+// =====================================================
+
+function getSimilarityRepresentativeScore(
+  item
+) {
+
+  const favoriteScore =
+    item.favorite === true
+      ? 1000000
+      : 0;
+
+
+  const bestShotScore =
+    Number(
+      item.ai?.bestShotScore ||
+      0
+    );
+
+
+  const momentScore =
+    Number(
+      item.ai?.momentScore ||
+      0
+    );
+
+
+  const qualityScore =
+    Number(
+      item.ai?.qualityScore ||
+      0
+    );
+
+
+  return (
+    favoriteScore +
+    (
+      bestShotScore *
+      10000
+    ) +
+    (
+      momentScore *
+      100
+    ) +
+    qualityScore
+  );
+
+}
+
+
+function chooseSimilarityRepresentative(
+  group
+) {
+
+  if (
+    !Array.isArray(group) ||
+    group.length === 0
+  ) {
+
+    return null;
+
+  }
+
+
+  return [
+    ...group
+  ].sort(
+    (a, b) => {
+
+      const scoreDifference =
+        getSimilarityRepresentativeScore(
+          b
+        ) -
+        getSimilarityRepresentativeScore(
+          a
+        );
+
+
+      if (
+        scoreDifference !== 0
+      ) {
+
+        return scoreDifference;
+
+      }
+
+
+      // 모든 점수가 같으면
+      // 먼저 촬영한 사진 우선
+      return (
+        getTakenMillis(a) -
+        getTakenMillis(b)
+      );
+
+    }
+  )[0];
+
+}
+
+
+// -----------------------------------------------------
+// 현재 유사 그룹의 대표사진 테스트
+// -----------------------------------------------------
+
+function testSimilarityRepresentatives() {
+
+  const groups =
+    window.__similarPhotoGroups ||
+    [];
+
+
+  if (
+    groups.length === 0
+  ) {
+
+    console.log(
+      "먼저 testSimilarPhotoGroups()를 실행해주세요."
+    );
+
+    return [];
+
+  }
+
+
+  const results =
+    groups.map(
+      (
+        group,
+        index
+      ) => {
+
+        const representative =
+          chooseSimilarityRepresentative(
+            group
+          );
+
+
+        console.group(
+          "대표사진 그룹 " +
+          String(
+            index + 1
+          )
+        );
+
+
+        console.log(
+          "대표사진:",
+          representative?.name
+        );
+
+
+        console.table(
+          group.map(
+            (item) => ({
+
+              파일명:
+                item.name,
+
+              대표:
+                item.id ===
+                representative?.id
+                  ? "★"
+                  : "",
+
+              베스트:
+                item.favorite === true
+                  ? "♥"
+                  : "",
+
+              AI추천:
+                item.ai
+                  ?.bestShotScore ??
+                0,
+
+              순간점수:
+                item.ai
+                  ?.momentScore ??
+                0,
+
+              품질점수:
+                item.ai
+                  ?.qualityScore ??
+                0
+
+            })
+          )
+        );
+
+
+        console.groupEnd();
+
+
+        return {
+          group,
+          representative
+        };
+
+      }
+    );
+
+
+  window.__similarRepresentativeResults =
+    results;
+
+
+  return results;
+
+}
+
+
+window.testSimilarityRepresentatives =
+  testSimilarityRepresentatives;
 
 // 개발자 도구에서 직접 실행할 수 있게 공개
 window.testSimilarPhotoGroups =

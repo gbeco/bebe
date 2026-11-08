@@ -2689,6 +2689,332 @@ function testSimilarityRepresentatives() {
 window.testSimilarityRepresentatives =
   testSimilarityRepresentatives;
 
+
+// =====================================================
+// Similar Photo Groups -> Firestore
+// =====================================================
+
+async function saveSimilarPhotoGroupsToFirestore() {
+
+  if (
+    !isAdmin ||
+    !currentUser
+  ) {
+
+    alert(
+      "관리자 로그인 후 실행해주세요."
+    );
+
+    return;
+
+  }
+
+
+  const groups =
+    window.__similarPhotoGroups ||
+    [];
+
+
+  if (
+    groups.length === 0
+  ) {
+
+    alert(
+      "먼저 유사 사진 테스트를 실행해주세요."
+    );
+
+    return;
+
+  }
+
+
+  const totalPhotos =
+    groups.reduce(
+      (sum, group) =>
+        sum + group.length,
+      0
+    );
+
+
+  const confirmed =
+    window.confirm(
+      "유사 사진 그룹을 Firestore에 저장할까요?\n\n" +
+      "그룹: " +
+      groups.length +
+      "개\n" +
+      "사진: " +
+      totalPhotos +
+      "장"
+    );
+
+
+  if (!confirmed) {
+
+    return;
+
+  }
+
+
+  console.log(
+    "===================================="
+  );
+
+
+  console.log(
+    "유사 그룹 Firestore 저장 시작"
+  );
+
+
+  let savedCount =
+    0;
+
+
+  const savedGroups =
+    [];
+
+
+  try {
+
+    for (
+      let groupIndex = 0;
+      groupIndex <
+        groups.length;
+      groupIndex += 1
+    ) {
+
+      const group =
+        groups[
+          groupIndex
+        ];
+
+
+      if (
+        !Array.isArray(group) ||
+        group.length < 2
+      ) {
+
+        continue;
+
+      }
+
+
+      // 촬영시간 순으로 다시 정렬
+      const sortedGroup =
+        [
+          ...group
+        ].sort(
+          (a, b) =>
+            getTakenMillis(a) -
+            getTakenMillis(b)
+        );
+
+
+      // 가장 먼저 촬영된 사진 ID를
+      // 그룹의 고정 ID로 사용
+      const groupId =
+        "sim_" +
+        sortedGroup[0].id;
+
+
+      const representative =
+        chooseSimilarityRepresentative(
+          sortedGroup
+        );
+
+
+      console.group(
+        "그룹 " +
+        String(
+          groupIndex + 1
+        ) +
+        " / " +
+        String(
+          groups.length
+        ) +
+        " · " +
+        groupId
+      );
+
+
+      for (
+        let itemIndex = 0;
+        itemIndex <
+          sortedGroup.length;
+        itemIndex += 1
+      ) {
+
+        const item =
+          sortedGroup[
+            itemIndex
+          ];
+
+
+        console.log(
+          "저장 중",
+          itemIndex + 1,
+          "/",
+          sortedGroup.length,
+          item.name
+        );
+
+
+        // 썸네일에서 dHash 다시 계산
+        const hash =
+          await createSimilarityDHash(
+            item
+          );
+
+
+        const isRepresentative =
+          item.id ===
+          representative?.id;
+
+
+        await updateDoc(
+          doc(
+            db,
+            "media",
+            item.id
+          ),
+          {
+
+            similarGroupId:
+              groupId,
+
+            similarHash:
+              hash,
+
+            similarRepresentative:
+              isRepresentative,
+
+            similarityUpdatedAt:
+              serverTimestamp()
+
+          }
+        );
+
+
+        // 현재 메모리에도 반영
+        item.similarGroupId =
+          groupId;
+
+
+        item.similarHash =
+          hash;
+
+
+        item.similarRepresentative =
+          isRepresentative;
+
+
+        savedCount +=
+          1;
+
+      }
+
+
+      savedGroups.push({
+
+        groupId,
+
+        count:
+          sortedGroup.length,
+
+        representativeId:
+          representative?.id ||
+          null,
+
+        representativeName:
+          representative?.name ||
+          ""
+
+      });
+
+
+      console.log(
+        "대표사진:",
+        representative?.name
+      );
+
+
+      console.groupEnd();
+
+    }
+
+
+    window.__similarSavedGroups =
+      savedGroups;
+
+
+    console.log(
+      "===================================="
+    );
+
+
+    console.log(
+      "유사 그룹 저장 완료"
+    );
+
+
+    console.log(
+      "그룹:",
+      savedGroups.length
+    );
+
+
+    console.log(
+      "사진:",
+      savedCount
+    );
+
+
+    console.table(
+      savedGroups
+    );
+
+
+    alert(
+      "유사 사진 그룹 저장 완료\n\n" +
+      "그룹 " +
+      savedGroups.length +
+      "개\n" +
+      "사진 " +
+      savedCount +
+      "장"
+    );
+
+
+    // Firestore 값을 다시 불러옴
+    await loadMedia();
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "유사 그룹 저장 실패",
+      error
+    );
+
+
+    alert(
+      "유사 그룹 저장 중 오류가 발생했습니다.\n" +
+      (
+        error.message ||
+        String(error)
+      )
+    );
+
+  }
+
+}
+
+
+window.saveSimilarPhotoGroupsToFirestore =
+  saveSimilarPhotoGroupsToFirestore;
+
+
+
 // 개발자 도구에서 직접 실행할 수 있게 공개
 window.testSimilarPhotoGroups =
   testSimilarPhotoGroups;

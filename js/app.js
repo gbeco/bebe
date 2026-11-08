@@ -1715,7 +1715,8 @@ function loadSimilarityImage(item) {
       image.src =
         getThumbnailUrl(
           item
-        );
+        ) +
+        "?similarity=2";
 
     }
   );

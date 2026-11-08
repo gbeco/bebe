@@ -1659,6 +1659,907 @@ function getThumbnailUrl(
 
 
 // =====================================================
+// Similar Photo Test
+// Firestore 저장 없음 / 테스트 전용
+// =====================================================
+
+const SIMILARITY_TEST_TIME_SECONDS = 15;
+const SIMILARITY_TEST_HASH_DISTANCE = 10;
+
+
+// -----------------------------------------------------
+// 썸네일 이미지 로드
+// -----------------------------------------------------
+
+function loadSimilarityImage(item) {
+
+  return new Promise(
+    (resolve, reject) => {
+
+      const image =
+        new Image();
+
+
+      image.crossOrigin =
+        "anonymous";
+
+
+      image.decoding =
+        "async";
+
+
+      image.onload =
+        () => {
+
+          resolve(image);
+
+        };
+
+
+      image.onerror =
+        () => {
+
+          reject(
+            new Error(
+              "썸네일을 읽을 수 없습니다: " +
+              (
+                item.name ||
+                item.id
+              )
+            )
+          );
+
+        };
+
+
+      image.src =
+        getThumbnailUrl(
+          item
+        );
+
+    }
+  );
+
+}
+
+
+// -----------------------------------------------------
+// 64bit dHash 생성
+// 9 x 8 이미지의 인접 픽셀 밝기를 비교
+// -----------------------------------------------------
+
+async function createSimilarityDHash(
+  item
+) {
+
+  const image =
+    await loadSimilarityImage(
+      item
+    );
+
+
+  const canvas =
+    document.createElement(
+      "canvas"
+    );
+
+
+  canvas.width =
+    9;
+
+
+  canvas.height =
+    8;
+
+
+  const context =
+    canvas.getContext(
+      "2d",
+      {
+        willReadFrequently:
+          true
+      }
+    );
+
+
+  if (!context) {
+
+    throw new Error(
+      "Canvas를 생성할 수 없습니다."
+    );
+
+  }
+
+
+  context.drawImage(
+    image,
+    0,
+    0,
+    9,
+    8
+  );
+
+
+  const imageData =
+    context.getImageData(
+      0,
+      0,
+      9,
+      8
+    );
+
+
+  const pixels =
+    imageData.data;
+
+
+  const gray =
+    [];
+
+
+  for (
+    let index = 0;
+    index < pixels.length;
+    index += 4
+  ) {
+
+    const red =
+      pixels[index];
+
+
+    const green =
+      pixels[index + 1];
+
+
+    const blue =
+      pixels[index + 2];
+
+
+    gray.push(
+      (
+        red * 0.299
+      ) +
+      (
+        green * 0.587
+      ) +
+      (
+        blue * 0.114
+      )
+    );
+
+  }
+
+
+  let hash =
+    0n;
+
+
+  for (
+    let y = 0;
+    y < 8;
+    y += 1
+  ) {
+
+    for (
+      let x = 0;
+      x < 8;
+      x += 1
+    ) {
+
+      const left =
+        gray[
+          y * 9 + x
+        ];
+
+
+      const right =
+        gray[
+          y * 9 + x + 1
+        ];
+
+
+      hash <<=
+        1n;
+
+
+      if (
+        left > right
+      ) {
+
+        hash |=
+          1n;
+
+      }
+
+    }
+
+  }
+
+
+  return hash
+    .toString(16)
+    .padStart(
+      16,
+      "0"
+    );
+
+}
+
+
+// -----------------------------------------------------
+// 두 dHash 사이의 Hamming distance
+//
+// 0   = 거의 동일
+// 숫자가 커질수록 차이가 큼
+// -----------------------------------------------------
+
+function getHashDistance(
+  hashA,
+  hashB
+) {
+
+  let value =
+    BigInt(
+      "0x" + hashA
+    ) ^
+    BigInt(
+      "0x" + hashB
+    );
+
+
+  let count =
+    0;
+
+
+  while (
+    value !== 0n
+  ) {
+
+    count +=
+      Number(
+        value &
+        1n
+      );
+
+
+    value >>=
+      1n;
+
+  }
+
+
+  return count;
+
+}
+
+
+// -----------------------------------------------------
+// Union Find
+// 유사한 사진끼리 그룹 연결
+// -----------------------------------------------------
+
+function createSimilarityUnionFind(
+  size
+) {
+
+  const parent =
+    Array.from(
+      {
+        length:
+          size
+      },
+      (_, index) =>
+        index
+    );
+
+
+  function find(index) {
+
+    if (
+      parent[index] !==
+        index
+    ) {
+
+      parent[index] =
+        find(
+          parent[index]
+        );
+
+    }
+
+
+    return parent[index];
+
+  }
+
+
+  function union(
+    first,
+    second
+  ) {
+
+    const firstRoot =
+      find(
+        first
+      );
+
+
+    const secondRoot =
+      find(
+        second
+      );
+
+
+    if (
+      firstRoot !==
+        secondRoot
+    ) {
+
+      parent[
+        secondRoot
+      ] =
+        firstRoot;
+
+    }
+
+  }
+
+
+  return {
+    find,
+    union
+  };
+
+}
+
+
+// -----------------------------------------------------
+// 테스트 실행
+// -----------------------------------------------------
+
+async function testSimilarPhotoGroups(
+  options = {}
+) {
+
+  const timeSeconds =
+    Number(
+      options.timeSeconds ??
+      SIMILARITY_TEST_TIME_SECONDS
+    );
+
+
+  const maxHashDistance =
+    Number(
+      options.maxHashDistance ??
+      SIMILARITY_TEST_HASH_DISTANCE
+    );
+
+
+  const maxPhotos =
+    Number(
+      options.maxPhotos ??
+      120
+    );
+
+
+  // =============================================
+  // 사진만 선택
+  // =============================================
+
+  const photos =
+    allMedia
+      .filter(
+        (item) =>
+          item.mediaType ===
+            "photo" &&
+          item.thumbnailDriveFileId &&
+          getTakenMillis(
+            item
+          ) > 0
+      )
+      .sort(
+        (a, b) =>
+          getTakenMillis(b) -
+          getTakenMillis(a)
+      )
+      .slice(
+        0,
+        maxPhotos
+      )
+      .sort(
+        (a, b) =>
+          getTakenMillis(a) -
+          getTakenMillis(b)
+      );
+
+
+  console.log(
+    "===================================="
+  );
+
+
+  console.log(
+    "유사 사진 테스트 시작"
+  );
+
+
+  console.log(
+    "검사 사진:",
+    photos.length
+  );
+
+
+  console.log(
+    "시간 기준:",
+    timeSeconds +
+      "초"
+  );
+
+
+  console.log(
+    "dHash 거리 기준:",
+    maxHashDistance
+  );
+
+
+  if (
+    photos.length < 2
+  ) {
+
+    console.log(
+      "비교할 사진이 부족합니다."
+    );
+
+
+    return [];
+
+  }
+
+
+  const timeWindow =
+    timeSeconds *
+    1000;
+
+
+  // =============================================
+  // 우선 촬영시간이 가까운 사진만 후보 선정
+  // =============================================
+
+  const candidateIndexes =
+    new Set();
+
+
+  for (
+    let first = 0;
+    first <
+      photos.length;
+    first += 1
+  ) {
+
+    const firstTime =
+      getTakenMillis(
+        photos[first]
+      );
+
+
+    for (
+      let second =
+        first + 1;
+      second <
+        photos.length;
+      second += 1
+    ) {
+
+      const secondTime =
+        getTakenMillis(
+          photos[second]
+        );
+
+
+      const difference =
+        secondTime -
+        firstTime;
+
+
+      if (
+        difference >
+        timeWindow
+      ) {
+
+        break;
+
+      }
+
+
+      candidateIndexes.add(
+        first
+      );
+
+
+      candidateIndexes.add(
+        second
+      );
+
+    }
+
+  }
+
+
+  const indexes =
+    Array.from(
+      candidateIndexes
+    );
+
+
+  console.log(
+    "시간상 유사 후보:",
+    indexes.length,
+    "장"
+  );
+
+
+  if (
+    indexes.length < 2
+  ) {
+
+    console.log(
+      "15초 이내 촬영된 사진 후보가 없습니다."
+    );
+
+
+    return [];
+
+  }
+
+
+  // =============================================
+  // dHash 계산
+  // =============================================
+
+  const hashes =
+    new Map();
+
+
+  for (
+    let position = 0;
+    position <
+      indexes.length;
+    position += 1
+  ) {
+
+    const index =
+      indexes[
+        position
+      ];
+
+
+    const item =
+      photos[
+        index
+      ];
+
+
+    console.log(
+      "해시 계산",
+      position + 1,
+      "/",
+      indexes.length,
+      item.name
+    );
+
+
+    try {
+
+      const hash =
+        await createSimilarityDHash(
+          item
+        );
+
+
+      hashes.set(
+        index,
+        hash
+      );
+
+    }
+
+    catch (error) {
+
+      console.warn(
+        "유사도 계산 실패",
+        item.name,
+        error
+      );
+
+    }
+
+  }
+
+
+  // =============================================
+  // 시간 + 이미지 유사도 동시 비교
+  // =============================================
+
+  const unionFind =
+    createSimilarityUnionFind(
+      photos.length
+    );
+
+
+  const matchedIndexes =
+    new Set();
+
+
+  for (
+    let first = 0;
+    first <
+      photos.length;
+    first += 1
+  ) {
+
+    if (
+      !hashes.has(
+        first
+      )
+    ) {
+
+      continue;
+
+    }
+
+
+    const firstTime =
+      getTakenMillis(
+        photos[first]
+      );
+
+
+    for (
+      let second =
+        first + 1;
+      second <
+        photos.length;
+      second += 1
+    ) {
+
+      const secondTime =
+        getTakenMillis(
+          photos[second]
+        );
+
+
+      const timeDifference =
+        secondTime -
+        firstTime;
+
+
+      if (
+        timeDifference >
+        timeWindow
+      ) {
+
+        break;
+
+      }
+
+
+      if (
+        !hashes.has(
+          second
+        )
+      ) {
+
+        continue;
+
+      }
+
+
+      const hashDistance =
+        getHashDistance(
+          hashes.get(
+            first
+          ),
+          hashes.get(
+            second
+          )
+        );
+
+
+      if (
+        hashDistance <=
+        maxHashDistance
+      ) {
+
+        unionFind.union(
+          first,
+          second
+        );
+
+
+        matchedIndexes.add(
+          first
+        );
+
+
+        matchedIndexes.add(
+          second
+        );
+
+      }
+
+    }
+
+  }
+
+
+  // =============================================
+  // 실제 그룹 만들기
+  // =============================================
+
+  const groupMap =
+    new Map();
+
+
+  matchedIndexes.forEach(
+    (index) => {
+
+      const root =
+        unionFind.find(
+          index
+        );
+
+
+      if (
+        !groupMap.has(
+          root
+        )
+      ) {
+
+        groupMap.set(
+          root,
+          []
+        );
+
+      }
+
+
+      groupMap
+        .get(
+          root
+        )
+        .push(
+          photos[index]
+        );
+
+    }
+  );
+
+
+  const groups =
+    Array.from(
+      groupMap.values()
+    )
+      .filter(
+        (group) =>
+          group.length >= 2
+      )
+      .map(
+        (group) =>
+          group.sort(
+            (a, b) =>
+              getTakenMillis(a) -
+              getTakenMillis(b)
+          )
+      )
+      .sort(
+        (a, b) =>
+          getTakenMillis(
+            b[0]
+          ) -
+          getTakenMillis(
+            a[0]
+          )
+      );
+
+
+  // =============================================
+  // 콘솔 출력
+  // =============================================
+
+  console.log(
+    "===================================="
+  );
+
+
+  console.log(
+    "유사 그룹 발견:",
+    groups.length,
+    "개"
+  );
+
+
+  groups.forEach(
+    (group, groupIndex) => {
+
+      console.group(
+        "유사 그룹 " +
+        String(
+          groupIndex + 1
+        ) +
+        " · " +
+        String(
+          group.length
+        ) +
+        "장"
+      );
+
+
+      console.table(
+        group.map(
+          (item) => {
+
+            const date =
+              getTakenDate(
+                item
+              );
+
+
+            return {
+
+              파일명:
+                item.name,
+
+              촬영시각:
+                date
+                  ? date.toLocaleString(
+                      "ko-KR"
+                    )
+                  : "",
+
+              AI점수:
+                item.ai
+                  ?.bestShotScore ??
+                "",
+
+              베스트:
+                item.favorite ===
+                  true
+                  ? "♥"
+                  : ""
+
+            };
+
+          }
+        )
+      );
+
+
+      console.groupEnd();
+
+    }
+  );
+
+
+  window.__similarPhotoGroups =
+    groups;
+
+
+  console.log(
+    "결과는 window.__similarPhotoGroups 에도 저장했습니다."
+  );
+
+
+  return groups;
+
+}
+
+
+// 개발자 도구에서 직접 실행할 수 있게 공개
+window.testSimilarPhotoGroups =
+  testSimilarPhotoGroups;
+
+
+// =====================================================
 // Viewer
 // =====================================================
 

@@ -8453,13 +8453,11 @@ function renderViews() {
   // 최근 12개
 
   renderSimilarityGrid(
-    recentGallery,
-    allMedia.slice(
-      0,
+      recentGallery,
+      allMedia,
+      "등록된 사진이 아직 없습니다.",
       12
-    ),
-    "등록된 사진이 아직 없습니다."
-  );
+    );
 
 
   // ---------------------------------------------------
@@ -8550,11 +8548,11 @@ function renderViews() {
 
 
   renderGroups(
-    allGroups,
-    dayGroups,
-    formatDayTitle,
-    true
-  );
+      monthGroups,
+      dayGroups,
+      formatDayTitle,
+      true
+    );
 
 
   // ---------------------------------------------------
@@ -8749,6 +8747,58 @@ async function loadMedia() {
       (item) =>
         item.published === true
     );
+
+  window.debugSimilarityData =
+      () => {
+
+        const groupedItems =
+          allMedia.filter(
+            (item) =>
+              Boolean(
+                item.similarGroupId
+              )
+          );
+
+
+        console.log(
+          "전체 공개 미디어:",
+          allMedia.length
+        );
+
+
+        console.log(
+          "유사 그룹 필드가 있는 사진:",
+          groupedItems.length
+        );
+
+
+        console.table(
+          groupedItems.map(
+            (item) => ({
+
+              name:
+                item.name,
+
+              id:
+                item.id,
+
+              groupId:
+                item.similarGroupId,
+
+              representative:
+                item.similarRepresentative,
+
+              hash:
+                item.similarHash
+
+            })
+          )
+        );
+
+
+        return groupedItems;
+
+      };
   
   
   hiddenMedia =

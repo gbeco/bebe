@@ -5415,9 +5415,6 @@ uploadStartButton.addEventListener(
           
           }
 
-
-          successCount++;
-
         }
 
         catch (error) {

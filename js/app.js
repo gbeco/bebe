@@ -258,6 +258,12 @@ const hiddenMediaList =
   );
 
 
+const todayDday =
+  document.getElementById(
+    "todayDday"
+  );
+
+
 // Viewer
 
 const mediaViewer =
@@ -8384,6 +8390,15 @@ function renderViews() {
       new Date()
     );
 
+    if (
+        todayDday
+        ) {
+
+        todayDday.textContent =
+          getHajinDdayText();
+
+        }
+
 
   // ---------------------------------------------------
   // 오늘
@@ -8421,6 +8436,75 @@ function renderViews() {
 
       }
     );
+
+
+function getHajinDdayText() {
+
+  // 기준일: 2026년 1월 16일
+  const baseDay =
+    Math.floor(
+      Date.UTC(
+        2026,
+        0,
+        16
+      ) /
+      86400000
+    );
+
+
+  // 현재 날짜는 한국 시간 기준
+  const todayParts =
+    getSeoulDateParts(
+      new Date()
+    );
+
+
+  const todayDay =
+    Math.floor(
+      Date.UTC(
+        todayParts.year,
+        todayParts.month - 1,
+        todayParts.day
+      ) /
+      86400000
+    );
+
+
+  const difference =
+    todayDay -
+    baseDay;
+
+
+  if (
+    difference === 0
+  ) {
+
+    return "D-DAY";
+
+  }
+
+
+  if (
+    difference > 0
+  ) {
+
+    return (
+      "D+" +
+      difference
+    );
+
+  }
+
+
+  return (
+    "D-" +
+    Math.abs(
+      difference
+    )
+  );
+
+}
+
 
 // =============================================
 // 하진이 근황
